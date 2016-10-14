@@ -5,5 +5,8 @@
         <file>images/play.png</file>
         <file>images/stop.png</file>
         <file>config/checking_tools_settings.ini</file>
+        <file>bin/dm_call.bat</file>
+        <file>bin/paexec.exe</file>
+        <file>images/cmd.png</file>
     </qresource>
 </RCC>

@@ -16,17 +16,21 @@ include(QtXlsxWriter-master/src/xlsx/qtxlsx.pri)
 SOURCES += main.cpp\
         mainwindow.cpp \
     codeeditor.cpp \
-    analizador.cpp
+    analizador.cpp \
+    paexec.cpp \
+    console.cpp
 
 HEADERS  += mainwindow.h \
     codeeditor.h \
-    analizador.h
+    analizador.h \
+    paexec.h \
+    console.h
 
 FORMS    += mainwindow.ui
 
 RESOURCES += \
     data.qrc
 
+RC_FILE = app_icon.rc
+
 QMAKE_CXXFLAGS += -std=gnu++11
-
-

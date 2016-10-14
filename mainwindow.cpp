@@ -1,13 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QDir>
 #include <QDebug>
 #include <QDesktopWidget>
 #include <QThread>
 #include <QTimer>
 #include <QFileDialog>
 #include "xlsxdocument.h"
-
+#include <QInputDialog>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -26,6 +26,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+/* Funciones de Inicializacion */
 void MainWindow::loadSettings()
 {
     QString tmp="";
@@ -68,6 +69,10 @@ void MainWindow::init()
     ui->btnGO->setEnabled(false);
     ui->btnEditar->setVisible(false);
 
+/* Bloque de creacion de proceso paexec */
+    initProcess();
+/* End */
+
 /* Bloque de creacion de la variable analizador --> se mueve a otro hilo para no congelar la interface*/
     QThread* thread = new QThread(this);
     calc = new analizador(NULL);
@@ -79,42 +84,87 @@ void MainWindow::init()
     connect(ui->actionSalida_compuesta, &QAction::toggled, [=] (const bool val) {calc->setSalidaComp(val);} );
 /* End */
 
-/* Bloque de Conncet para el cambio de pestañas */
+/* Bloque de 'connect' para el cambio de pestañas */
     connect(ui->tabWidget, &QTabWidget::currentChanged, [=] (const int idx) {
         if(idx==2)
             ui->panel_trazabilidad->show();
         else
             ui->panel_trazabilidad->hide();
         QTimer::singleShot(100, this, SLOT(update_Geometry()));
+        activarBotones(idx);
     });
+/* End */
+
+/* Bloque de creaciones del binario ../bin/paexec.exe */
+    QString path = QDir::currentPath()+"/bin";
+    if(!QDir(path).exists()){
+        QDir().mkdir(path);
+        QFile::copy(":/bin/paexec.exe", path+"/paexec.exe");
+        QFile::setPermissions(path+"/paexec.exe" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    }
 /* End */
 
 }
 
+void MainWindow::initProcess()
+{
+    procPaExec = new QProcess(this);
+    procPaExec->setProcessChannelMode( QProcess::SeparateChannels );
+    procPaExec->start(UPDATER, ARGUMENTS, QProcess::ReadWrite);
+    procPaExec->waitForStarted(5000);
+
+    QString cmd("cd "+WORKING_DIR+"\n");
+    procPaExec->write(cmd.toLatin1());
+    procPaExec->waitForFinished(1000);
+    QByteArray ba = procPaExec->readAll();//clean stdout
+    Q_UNUSED(ba);
+
+    connect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+    connect(procPaExec, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
+
+    writeText("^ [Iniciando log del sistema... por favor espere]", msg_notify);
+}
+
 void MainWindow::update_Geometry()
 {
-    QDesktopWidget *desktop = QApplication::desktop();
-    QRect pantalla = desktop->screenGeometry();
-    double px,w,h,py;
+    double px,py,w,h;
+    QRect pantalla = this->geometry();
+    px = pantalla.x();
+    py = pantalla.y();
+
     int idx = ui->tabWidget->currentIndex();
     if(idx==2){
         ui->panel_trazabilidad->show();
-        w = 815;
+        w = 850;
         h = 600;
     }else{
         ui->panel_trazabilidad->hide();
-        w = 815;
+        w = 850;
         h = 220;
     }
-    px  = (pantalla.width()/2) - w/2;
-    py = (pantalla.height()/2) - h/2;
-
     this->setGeometry(px,py,w,h);
 }
+/* Fin de las funciones de Inicializacion */
 
+
+/* Funciones de los Menus y Botones */
 void MainWindow::on_actionStart_triggered()
 {
-   //ui->panel_trazabilidad->setVisible(false);
+    if(procPaExec->state()==QProcess::Running){
+        int idx = ui->tabWidget->currentIndex();
+        QString cmd = "";
+        if(idx==0){
+            QStringList lista = ( QStringList()<<ui->product_id->currentText()<<ui->project_id->currentText()<<ui->requests_id->text()<<ui->area_id->currentText() );;
+            cmd = "START paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
+            procPaExec->write(cmd.toLatin1());
+        }else if(idx==1){
+            QStringList lista = ( QStringList()<<ui->product_id->currentText()<<ui->project_id->currentText()<<ui->requests_id->text()<<ui->area_id->currentText() );;
+            cmd = "START paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
+            procPaExec->write(cmd.toLatin1());
+        }
+    }else{
+        writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
+    }
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -187,12 +237,6 @@ void MainWindow::on_toolFuncionalidad_clicked()
     }
 }
 
-void MainWindow::imprimirSalida(QStringList lista)
-{
-    ui->textAreaSalida->clear();
-    ui->textAreaSalida->appendPlainText(lista.join("\n"));
-}
-
 void MainWindow::on_actionEliminar_Duplicados_triggered()
 {
     QStringList listaSalida = ui->textAreaSalida->toPlainText().split("\n");
@@ -206,3 +250,74 @@ void MainWindow::on_actionEliminar_Duplicados_triggered()
     }
     ui->textAreaSalida->setPlainText(listaSalida.join("\n"));
 }
+
+void MainWindow::on_actionCMD_triggered()
+{
+    bool ok;
+    // Ask for birth date as a string.
+    QString text = QInputDialog::getText(0, "Linea de comandos_",
+                                         "Ingrese:", QLineEdit::Normal,
+                                         "", &ok);
+    if (ok && !text.isEmpty()) {
+        if(procPaExec->state()==QProcess::Running)
+            procPaExec->write(text.toLatin1()+"\n");
+    }
+}
+/* Fin Menus y Botones */
+
+
+/* Funciones de control */
+void MainWindow::imprimirSalida(QStringList lista)
+{
+    ui->textAreaSalida->clear();
+    ui->textAreaSalida->appendPlainText(lista.join("\n"));
+}
+
+void MainWindow::readOutput()
+{
+    QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
+    writeText(buff, Qt::green);
+}
+
+void MainWindow::readError()
+{
+    QString error = QString::fromLocal8Bit(procPaExec->readAllStandardError());
+    writeText(error, Qt::red);
+}
+
+void MainWindow::writeText(QString text, int color)
+{
+    QString line = text;
+
+    QTextCursor cursor = ui->terminal->textCursor();
+    QString alertHtml = "<font color=\"red\">";
+    QString notifyHtml = "<font color=\"blue\">";
+    QString infoHtml = "<font color=\"green\">";
+    QString endHtml = "</font><br>";
+
+    switch(color)
+    {
+        case msg_alert: line.prepend(alertHtml.toLatin1()); break;
+        case msg_notify: line.prepend(notifyHtml.toLatin1()); break;
+        case msg_info: line.prepend(infoHtml.toLatin1()); break;
+        default: line.prepend(infoHtml.toLatin1()); break;
+    }
+
+    line = line.append(endHtml.toLatin1());
+    ui->terminal->putData(line);
+    cursor.movePosition(QTextCursor::End);
+    ui->terminal->setTextCursor(cursor);
+
+}
+
+void MainWindow::activarBotones(int idx)
+{
+    switch(idx)
+    {
+        case 0: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
+        case 1: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
+        case 2: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
+        default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
+    }
+}
+/* Fin funciones de control */
