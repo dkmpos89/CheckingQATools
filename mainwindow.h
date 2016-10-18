@@ -39,6 +39,8 @@ private slots:
     void on_actionEliminar_Duplicados_triggered();
     void on_actionCMD_triggered();
 
+    void on_pushButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     QString m_sSettingsFile;

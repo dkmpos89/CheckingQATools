@@ -9,6 +9,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -24,20 +25,26 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+    procPaExec->kill();
+    procPaExec->close();
 }
 
 /* Funciones de Inicializacion */
 void MainWindow::loadSettings()
 {
+    /* SETTINGS: crecacion del directorio 'config' y carga de los archivos '.ini' */
     QString tmp="";
     QString path = QDir::currentPath()+"/config";
     if(!QDir(path).exists()){
         QDir().mkdir(path);
         QFile::copy(":/config/checking_tools_settings.ini", path+"/checking_tools_settings.ini");
+        QFile::copy(":/config/tfuncional_config.ini", path+"/tfuncional_config.ini");
         QFile::setPermissions(path+"/checking_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+        QFile::setPermissions(path+"/tfuncional_config.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     }
     settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
 
+    /* SETTINGS: comboBox de ID DE PRODUCTO */
     settings->beginGroup("product");
     QStringList listaKeys = settings->childKeys();
 
@@ -47,6 +54,7 @@ void MainWindow::loadSettings()
     }
     settings->endGroup();
 
+    /* SETTINGS: comboBox de ID DE PROYECTO */
     settings->beginGroup("project");
     QStringList listaProject = settings->childKeys();
 
@@ -57,10 +65,18 @@ void MainWindow::loadSettings()
     }
     settings->endGroup();
 
-    settings->beginGroup("rutas_admision");
-    ui->planillaExcel->setText(settings->value("planilla").toString());
-    ui->funcionalidadExcel->setText(settings->value("funcionalidad").toString());
-    settings->endGroup();
+    /* SETTINGS: comboBox de trazabilodad funcional */
+    QString m_SFile = QDir::currentPath()+"/config/tfuncional_config.ini";
+    QSettings *config = new QSettings(m_SFile, QSettings::IniFormat);
+    QStringList listaGrupos = config->childGroups();
+
+    foreach (QString key, listaGrupos) {
+        ui->comboRutas_TF->addItem(key);
+    }
+    config->beginGroup("ADMISION_BANCO");
+    ui->planillaExcel->setText(config->value("planilla").toString());
+    ui->funcionalidadExcel->setText(config->value("funcionalidad").toString());
+    config->endGroup();
 }
 
 void MainWindow::init()
@@ -150,21 +166,23 @@ void MainWindow::update_Geometry()
 /* Funciones de los Menus y Botones */
 void MainWindow::on_actionStart_triggered()
 {
+    QString cmd = "";
+    int idx = 0;
+
     if(procPaExec->state()==QProcess::Running){
-        int idx = ui->tabWidget->currentIndex();
-        QString cmd = "";
+        idx = ui->tabWidget->currentIndex();
         if(idx==0){
             QStringList lista = ( QStringList()<<ui->product_id->currentText()<<ui->project_id->currentText()<<ui->requests_id->text()<<ui->area_id->currentText() );;
-            cmd = "START paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
-            procPaExec->write(cmd.toLatin1());
+            cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
         }else if(idx==1){
             QStringList lista = ( QStringList()<<ui->product_id->currentText()<<ui->project_id->currentText()<<ui->requests_id->text()<<ui->area_id->currentText() );;
-            cmd = "START paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
-            procPaExec->write(cmd.toLatin1());
+            cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
         }
     }else{
         writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
+        return;
     }
+    procPaExec->write(cmd.toLatin1());
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -207,6 +225,8 @@ void MainWindow::on_btnSetear_clicked()
 
 void MainWindow::on_toolPlanilla_clicked()
 {
+    QString m_SFile = QDir::currentPath()+"/config/tfuncional_config.ini";
+    QSettings * config = new QSettings(m_SFile, QSettings::IniFormat);
     QString path,tipo,tipoFile,comboText;
     tipoFile = "xlsx";
     tipo = ( tipoFile.toUpper() )+" Files (*."+(tipoFile.toLower())+")";
@@ -214,15 +234,17 @@ void MainWindow::on_toolPlanilla_clicked()
 
     if(path != NULL){
         ui->planillaExcel->setText(path);
-        comboText = ui->comboRutas->currentText();
-        settings->beginGroup(comboText);
-        settings->setValue("planilla", path);
-        settings->endGroup();
+        comboText = ui->comboRutas_TF->currentText();
+        config->beginGroup(comboText);
+        config->setValue("planilla", path);
+        config->endGroup();
     }
 }
 
 void MainWindow::on_toolFuncionalidad_clicked()
 {
+    QString m_SFile = QDir::currentPath()+"/config/tfuncional_config.ini";
+    QSettings * config = new QSettings(m_SFile, QSettings::IniFormat);
     QString path,tipo,tipoFile,comboText;
     tipoFile = "xlsx";
     tipo = ( tipoFile.toUpper() )+" Files (*."+(tipoFile.toLower())+")";
@@ -230,10 +252,10 @@ void MainWindow::on_toolFuncionalidad_clicked()
 
     if(path != NULL){
         ui->funcionalidadExcel->setText(path);
-        comboText = ui->comboRutas->currentText();
-        settings->beginGroup(comboText);
-        settings->setValue("funcionalidad", path);
-        settings->endGroup();
+        comboText = ui->comboRutas_TF->currentText();
+        config->beginGroup(comboText);
+        config->setValue("funcionalidad", path);
+        config->endGroup();
     }
 }
 
@@ -317,7 +339,18 @@ void MainWindow::activarBotones(int idx)
         case 0: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
         case 1: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
         case 2: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
+        case 3: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
         default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
 }
 /* Fin funciones de control */
+
+
+
+
+/* Zona de pruebas */
+void MainWindow::on_pushButton_clicked()
+{
+    // algun codigo va aqui
+}
+/* Fin de la zona de pruebas */

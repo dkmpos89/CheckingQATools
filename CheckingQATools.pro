@@ -17,13 +17,11 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     codeeditor.cpp \
     analizador.cpp \
-    paexec.cpp \
     console.cpp
 
 HEADERS  += mainwindow.h \
     codeeditor.h \
     analizador.h \
-    paexec.h \
     console.h
 
 FORMS    += mainwindow.ui
