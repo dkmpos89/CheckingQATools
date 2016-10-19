@@ -52,236 +52,249 @@
        </font>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
         <string>REQUESTS</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QLabel" name="label">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="autoFillBackground">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Nombre del Script</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="name_script">
-            <property name="minimumSize">
-             <size>
-              <width>147</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="acceptDrops">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>certificacion_request.bat</string>
-            </property>
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
+        <item row="1" column="0" colspan="5">
+         <widget class="QWidget" name="contenedorTab1" native="true">
+          <layout class="QGridLayout" name="gridLayout_7">
+           <item row="0" column="3">
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <item>
+              <widget class="QLabel" name="label_4">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>REQUESTS_ID</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="requests_id">
+               <property name="minimumSize">
+                <size>
+                 <width>170</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="5">
+            <layout class="QVBoxLayout" name="verticalLayout_10">
+             <item>
+              <widget class="QLabel" name="label_9">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>AIM</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_6">
+               <item>
+                <spacer name="horizontalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="checkBox">
+                 <property name="layoutDirection">
+                  <enum>Qt::LeftToRight</enum>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="tristate">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="4">
+            <layout class="QVBoxLayout" name="verticalLayout_5">
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>AREA_ID</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="area_id">
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="2">
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>PROJECT_ID</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="project_id">
+               <property name="minimumSize">
+                <size>
+                 <width>170</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QVBoxLayout" name="verticalLayout">
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Nombre del Script</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="name_script">
+               <property name="minimumSize">
+                <size>
+                 <width>147</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>certificacion_request.bat</string>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="1">
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>PRODUCT_ID</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="product_id">
+               <property name="minimumSize">
+                <size>
+                 <width>147</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
         </item>
-        <item row="0" column="1">
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QLabel" name="label_2">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>PRODUCT_ID</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="product_id">
-            <property name="minimumSize">
-             <size>
-              <width>147</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
+        <item row="2" column="0" colspan="5">
+         <widget class="QProgressBar" name="progressBar_tab1">
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
         </item>
-        <item row="0" column="2">
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <widget class="QLabel" name="label_3">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>PROJECT_ID</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="project_id">
-            <property name="minimumSize">
-             <size>
-              <width>170</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="0" column="3">
-         <layout class="QVBoxLayout" name="verticalLayout_4">
-          <item>
-           <widget class="QLabel" name="label_4">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>REQUESTS_ID</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="requests_id">
-            <property name="minimumSize">
-             <size>
-              <width>170</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="0" column="4">
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <item>
-           <widget class="QLabel" name="label_5">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>AREA_ID</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="area_id">
-            <property name="minimumSize">
-             <size>
-              <width>100</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="0" column="5">
-         <layout class="QVBoxLayout" name="verticalLayout_10">
-          <item>
-           <widget class="QLabel" name="label_9">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>AIM</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_6">
-            <item>
-             <spacer name="horizontalSpacer_3">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBox">
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="tristate">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_4">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-        <item row="1" column="2">
+        <item row="3" column="0" colspan="5">
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -294,20 +307,17 @@
           </property>
          </spacer>
         </item>
-        <item row="2" column="0" colspan="6">
-         <widget class="QProgressBar" name="progressBar_tab1">
-          <property name="value">
-           <number>0</number>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
         <string>BASELINE</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_5"/>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QWidget" name="contenedorTab2" native="true"/>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="tab_3">
        <attribute name="title">

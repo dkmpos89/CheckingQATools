@@ -183,6 +183,8 @@ void MainWindow::on_actionStart_triggered()
         return;
     }
     procPaExec->write(cmd.toLatin1());
+    bloquarPanel(true);
+    // MostrarCursorCarga(true);
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -343,6 +345,20 @@ void MainWindow::activarBotones(int idx)
         default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
 }
+
+void MainWindow::bloquarPanel(bool val)
+{
+    int idx = ui->tabWidget->currentIndex();
+    switch(idx)
+    {
+        case 0: ui->contenedorTab1->setEnabled(!val); break;
+        case 1: ui->contenedorTab2->setEnabled(!val); break;
+        //case 2: line.prepend(infoHtml.toLatin1()); break;
+        //case 3: line.prepend(infoHtml.toLatin1()); break;
+        default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
+    }
+
+}
 /* Fin funciones de control */
 
 
@@ -354,3 +370,4 @@ void MainWindow::on_pushButton_clicked()
     // algun codigo va aqui
 }
 /* Fin de la zona de pruebas */
+

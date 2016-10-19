@@ -30,6 +30,7 @@ public slots:
     void imprimirSalida(QStringList lista);
     void readOutput();
     void readError();
+    void bloquarPanel(bool val);
 private slots:
     void on_actionStart_triggered();
     void on_btnSetear_clicked();
