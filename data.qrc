@@ -9,5 +9,6 @@
         <file>bin/paexec.exe</file>
         <file>images/cmd.png</file>
         <file>config/tfuncional_config.ini</file>
+        <file>images/download.png</file>
     </qresource>
 </RCC>

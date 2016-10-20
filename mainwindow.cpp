@@ -10,6 +10,8 @@
 #include <QMessageBox>
 
 
+
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -73,7 +75,7 @@ void MainWindow::loadSettings()
     foreach (QString key, listaGrupos) {
         ui->comboRutas_TF->addItem(key);
     }
-    config->beginGroup("ADMISION_BANCO");
+    config->beginGroup(listaGrupos[0]);
     ui->planillaExcel->setText(config->value("planilla").toString());
     ui->funcionalidadExcel->setText(config->value("funcionalidad").toString());
     config->endGroup();
@@ -151,11 +153,11 @@ void MainWindow::update_Geometry()
     int idx = ui->tabWidget->currentIndex();
     if(idx==2){
         ui->panel_trazabilidad->show();
-        w = 850;
+        w = 900;
         h = 600;
     }else{
         ui->panel_trazabilidad->hide();
-        w = 850;
+        w = 900;
         h = 220;
     }
     this->setGeometry(px,py,w,h);
@@ -369,5 +371,81 @@ void MainWindow::on_pushButton_clicked()
 {
     // algun codigo va aqui
 }
+
+void MainWindow::on_actionGet_triggered()
+{
+    QUrl iUrl("https://github.com/dkmpos89/softEGM_updates/raw/master/soft-updates.zip");
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+
+    QNetworkProxyQuery npq(iUrl);
+    QList<QNetworkProxy> listOfProxies = QNetworkProxyFactory::systemProxyForQuery(npq);
+
+    if (listOfProxies.count() !=0){
+        if (listOfProxies.at(0).type() != QNetworkProxy::NoProxy)    {
+            manager->setProxy(listOfProxies.at(0));
+            writeText( "Using Proxy " + listOfProxies.at(0).hostName()+"\n", msg_info);
+        }
+    }
+
+    connect(manager, &QNetworkAccessManager::finished, [=](QNetworkReply* rep) { downloadFinished(rep); } );
+
+    manager->get(QNetworkRequest(iUrl));
+
+    writeText("Descargando en .."+QDir::currentPath()+"/temp", msg_alert);
+}
 /* Fin de la zona de pruebas */
 
+void MainWindow::downloadFinished(QNetworkReply *reply)
+{
+    QString msg;
+    QUrl url = reply->url();
+    if (reply->error()) {
+        writeText("Download failed: "+reply->errorString()+"\n", msg_alert);
+        //emit downFinished(false, msg);
+    } else {
+        QString filename = saveFileName(url);
+        QString path = QDir::currentPath()+"/temp";
+        QDir().mkdir(path);
+        filename.prepend(QDir::currentPath()+"/temp/");
+        if (saveToDisk(filename, reply))
+            writeText("Download succeeded (saved to "+filename+")\n", msg_alert);
+        //emit downFinished(true, msg);
+    }
+    reply->deleteLater();
+}
+
+QString MainWindow::saveFileName(const QUrl &url)
+{
+    QString path = url.path();
+    QString basename = QFileInfo(path).fileName();
+
+    if (basename.isEmpty())
+        basename = "download";
+
+    if (QFile::exists(basename)) {
+        // already exists, don't overwrite
+        int i = 0;
+        basename += '.';
+        while (QFile::exists(basename + QString::number(i)))
+            ++i;
+
+        basename += QString::number(i);
+    }
+    return basename;
+}
+
+bool MainWindow::saveToDisk(const QString &filename, QIODevice *data)
+{
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly)) {
+        fprintf(stderr, "Could not open %s for writing: %s\n",
+                qPrintable(filename),
+                qPrintable(file.errorString()));
+        return false;
+    }
+
+    file.write(data->readAll());
+    file.close();
+
+    return true;
+}

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -32,3 +32,4 @@ RESOURCES += \
 RC_FILE = app_icon.rc
 
 QMAKE_CXXFLAGS += -std=gnu++11
+

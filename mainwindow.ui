@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>850</width>
+    <width>900</width>
     <height>495</height>
    </rect>
   </property>
@@ -18,13 +18,13 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>850</width>
+    <width>900</width>
     <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>850</width>
+    <width>900</width>
     <height>16777215</height>
    </size>
   </property>
@@ -589,13 +589,13 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>850</width>
+     <width>900</width>
      <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>Archivo</string>
+     <string>Inicio</string>
     </property>
     <addaction name="actionStart"/>
     <addaction name="actionStop"/>
@@ -613,16 +613,17 @@
      <string>Ayuda</string>
     </property>
     <addaction name="actionCMD"/>
+    <addaction name="actionGet"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Editar</string>
+     <string>Salida</string>
     </property>
     <addaction name="actionEliminar_Duplicados"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
    <addaction name="menuConfiguraciones"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuAyuda"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -634,6 +635,15 @@
    </property>
    <property name="movable">
     <bool>false</bool>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>24</width>
+     <height>24</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonIconOnly</enum>
    </property>
    <property name="floatable">
     <bool>false</bool>
@@ -648,6 +658,9 @@
    <addaction name="actionStop"/>
    <addaction name="separator"/>
    <addaction name="actionQuit"/>
+   <addaction name="separator"/>
+   <addaction name="separator"/>
+   <addaction name="actionGet"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionStart">
@@ -697,6 +710,21 @@
    </property>
    <property name="text">
     <string>CMD</string>
+   </property>
+  </action>
+  <action name="actionGet">
+   <property name="icon">
+    <iconset resource="data.qrc">
+     <normaloff>:/images/download.png</normaloff>:/images/download.png</iconset>
+   </property>
+   <property name="text">
+    <string>Get</string>
+   </property>
+   <property name="autoRepeat">
+    <bool>false</bool>
+   </property>
+   <property name="visible">
+    <bool>true</bool>
    </property>
   </action>
  </widget>
