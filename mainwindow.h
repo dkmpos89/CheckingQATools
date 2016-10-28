@@ -33,6 +33,7 @@ public:
     void activarBotones(int idx);
     bool saveToDisk(const QString &filename, QIODevice *data);
     QString saveFileName(const QUrl &url);
+    bool validarCampos(int idx);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);

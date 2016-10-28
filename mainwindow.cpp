@@ -11,7 +11,6 @@
 
 
 
-
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -52,7 +51,8 @@ void MainWindow::loadSettings()
 
     foreach (QString key, listaKeys) {
         tmp = settings->value(key).toString();
-        ui->product_id->addItem(tmp);
+        ui->product_id_requests->addItem(tmp);
+        ui->product_id_baseline->addItem(tmp);
     }
     settings->endGroup();
 
@@ -62,8 +62,11 @@ void MainWindow::loadSettings()
 
     foreach (QString key, listaProject) {
         tmp = settings->value(key).toString();
-        ui->project_id->addItem(tmp);
-        ui->area_id->addItem(key);
+        ui->project_id_requests->addItem(tmp);
+        ui->project_id_baseline->addItem(tmp);
+
+        ui->area_id_requests->addItem(key);
+        ui->area_id_baseline->addItem(key);
     }
     settings->endGroup();
 
@@ -84,6 +87,7 @@ void MainWindow::loadSettings()
 void MainWindow::init()
 {
     ui->progressBar_tab1->setVisible(false);
+    ui->progressBar_tab2->setVisible(false);
     ui->btnGO->setEnabled(false);
     ui->btnEditar->setVisible(false);
 
@@ -173,13 +177,16 @@ void MainWindow::on_actionStart_triggered()
 
     if(procPaExec->state()==QProcess::Running){
         idx = ui->tabWidget->currentIndex();
-        if(idx==0){
-            QStringList lista = ( QStringList()<<ui->product_id->currentText()<<ui->project_id->currentText()<<ui->requests_id->text()<<ui->area_id->currentText() );;
-            cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
-        }else if(idx==1){
-            QStringList lista = ( QStringList()<<ui->product_id->currentText()<<ui->project_id->currentText()<<ui->requests_id->text()<<ui->area_id->currentText() );;
-            cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
-        }
+        if(validarCampos(idx)){
+            if(idx==0){
+                QStringList lista = ( QStringList()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text()<<ui->area_id_requests->currentText() );;
+                cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
+            }else if(idx==1){
+                QStringList lista = ( QStringList()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text() );;
+                cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_RDC.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+" "+lista[4]+"\n";
+            }
+        }else
+            return;
     }else{
         writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
         return;
@@ -196,7 +203,7 @@ void MainWindow::on_btnEditar_clicked()
     ui->textAreaEntrada->setEnabled(true);
     ui->btnGO->setEnabled(false);
     ui->btnSetear->setEnabled(true);
-    ui->progressBar_tab1->setValue(0);
+    ui->progressBar_tf->setValue(0);
 }
 
 void MainWindow::on_btnSetear_clicked()
@@ -350,6 +357,7 @@ void MainWindow::activarBotones(int idx)
 
 void MainWindow::bloquarPanel(bool val)
 {
+    ui->menuBar->setEnabled(!val);
     int idx = ui->tabWidget->currentIndex();
     switch(idx)
     {
@@ -359,6 +367,33 @@ void MainWindow::bloquarPanel(bool val)
         //case 3: line.prepend(infoHtml.toLatin1()); break;
         default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
+
+}
+
+bool MainWindow::validarCampos(int idx)
+{
+    bool mflag = true;
+    QString area = "";
+    QString current_proj = "";
+    QString imputData = "";
+    QString project = "";
+
+    switch(idx)
+    {
+        case 0: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text(); break;
+        case 1: area = ui->area_id_baseline->currentText(); current_proj = ui->project_id_baseline->currentText(); imputData = ui->baseline_name->text(); break;
+    default: QMessageBox::warning(this,"CHKTools : ERROR!", "Imposible realizar el paso de validación!" ); return false; break;
+    }
+    settings->beginGroup("project");
+    project = settings->value(area).toString();
+    settings->endGroup();
+
+    if(imputData.isEmpty()){ mflag = false; QMessageBox::warning(this,"CHKTools : ERROR!", "Faltan datos!");}
+
+    //qInfo()<<area<<" - "<<current_proj<<" - "<<project<<endl;
+    if(current_proj!=project){ mflag = false; QMessageBox::warning(this,"CHKTools : ERROR!", "El area: "+area+" no coincide con el proyecto: "+current_proj);}
+
+    return mflag;
 
 }
 /* Fin funciones de control */
@@ -449,3 +484,5 @@ bool MainWindow::saveToDisk(const QString &filename, QIODevice *data)
 
     return true;
 }
+
+
