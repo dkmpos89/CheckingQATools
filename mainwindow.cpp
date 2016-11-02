@@ -19,8 +19,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_sSettingsFile = QDir::currentPath()+"/config/checking_tools_settings.ini";
     loadSettings();
     init();
-    ui->panel_trazabilidad->hide();
-    QTimer::singleShot(100, this, SLOT(update_Geometry()));
+    //ui->panel_trazabilidad->hide();
+    //QTimer::singleShot(100, this, SLOT(update_Geometry()));
 }
 
 MainWindow::~MainWindow()
@@ -107,14 +107,7 @@ void MainWindow::init()
 /* End */
 
 /* Bloque de 'connect' para el cambio de pestañas */
-    connect(ui->tabWidget, &QTabWidget::currentChanged, [=] (const int idx) {
-        if(idx==2)
-            ui->panel_trazabilidad->show();
-        else
-            ui->panel_trazabilidad->hide();
-        QTimer::singleShot(100, this, SLOT(update_Geometry()));
-        activarBotones(idx);
-    });
+    connect(ui->tabWidget, &QTabWidget::currentChanged, [=] (const int idx) { activarBotones(idx);  });
 /* End */
 
 /* Bloque de creaciones del binario ../bin/paexec.exe */
@@ -308,12 +301,18 @@ void MainWindow::imprimirSalida(QStringList lista)
 
 void MainWindow::readOutput()
 {
+    QObject *sender = QObject::sender();
+    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
+
     QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
     writeText(buff, Qt::green);
 }
 
 void MainWindow::readError()
 {
+    QObject *sender = QObject::sender();
+    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
+
     QString error = QString::fromLocal8Bit(procPaExec->readAllStandardError());
     writeText(error, Qt::red);
 }
@@ -370,6 +369,11 @@ void MainWindow::bloquarPanel(bool val)
 
 }
 
+void MainWindow::setConfigProgressBar(QProgressBar *pg, bool bp, int min, int max){
+    pg->setVisible(bp);
+    pg->setRange(min, max);
+}
+
 bool MainWindow::validarCampos(int idx)
 {
     bool mflag = true;
@@ -396,39 +400,6 @@ bool MainWindow::validarCampos(int idx)
     return mflag;
 
 }
-/* Fin funciones de control */
-
-
-
-
-/* Zona de pruebas */
-void MainWindow::on_pushButton_clicked()
-{
-    // algun codigo va aqui
-}
-
-void MainWindow::on_actionGet_triggered()
-{
-    QUrl iUrl("https://github.com/dkmpos89/softEGM_updates/raw/master/soft-updates.zip");
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-
-    QNetworkProxyQuery npq(iUrl);
-    QList<QNetworkProxy> listOfProxies = QNetworkProxyFactory::systemProxyForQuery(npq);
-
-    if (listOfProxies.count() !=0){
-        if (listOfProxies.at(0).type() != QNetworkProxy::NoProxy)    {
-            manager->setProxy(listOfProxies.at(0));
-            writeText( "Using Proxy " + listOfProxies.at(0).hostName()+"\n", msg_info);
-        }
-    }
-
-    connect(manager, &QNetworkAccessManager::finished, [=](QNetworkReply* rep) { downloadFinished(rep); } );
-
-    manager->get(QNetworkRequest(iUrl));
-
-    writeText("Descargando en .."+QDir::currentPath()+"/temp", msg_alert);
-}
-/* Fin de la zona de pruebas */
 
 void MainWindow::downloadFinished(QNetworkReply *reply)
 {
@@ -484,5 +455,43 @@ bool MainWindow::saveToDisk(const QString &filename, QIODevice *data)
 
     return true;
 }
+/* Fin funciones de control */
+
+
+
+
+/* Zona de pruebas */
+void MainWindow::on_btnTest_clicked()
+{
+    QStringList lista = ( QStringList()<<"\\\\192.168.10.63"<<"-u checking"<<"-p chm.321."<<"D:\\modelo_operativo_checking_4.2\\x_existfile.bat"<<"RDC"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3"<<"TEF" );
+
+    QString cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\x_existfile.bat "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
+
+    procPaExec->write(cmd.toLatin1());
+
+}
+
+void MainWindow::on_actionGet_triggered()
+{
+    QUrl iUrl("https://github.com/dkmpos89/softEGM_updates/raw/master/soft-updates.zip");
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+
+    QNetworkProxyQuery npq(iUrl);
+    QList<QNetworkProxy> listOfProxies = QNetworkProxyFactory::systemProxyForQuery(npq);
+
+    if (listOfProxies.count() !=0){
+        if (listOfProxies.at(0).type() != QNetworkProxy::NoProxy)    {
+            manager->setProxy(listOfProxies.at(0));
+            writeText( "Using Proxy " + listOfProxies.at(0).hostName()+"\n", msg_info);
+        }
+    }
+
+    connect(manager, &QNetworkAccessManager::finished, [=](QNetworkReply* rep) { downloadFinished(rep); } );
+
+    manager->get(QNetworkRequest(iUrl));
+
+    writeText("Descargando en .."+QDir::currentPath()+"/temp", msg_alert);
+}
+/* Fin de la zona de pruebas */
 
 

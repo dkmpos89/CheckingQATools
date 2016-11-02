@@ -11,7 +11,7 @@
 #include <QNetworkReply>
 #include <QNetworkProxy>
 #include <QUrl>
-
+#include <QProgressBar>
 
 namespace Ui {
 class MainWindow;
@@ -34,6 +34,7 @@ public:
     bool saveToDisk(const QString &filename, QIODevice *data);
     QString saveFileName(const QUrl &url);
     bool validarCampos(int idx);
+    void setConfigProgressBar(QProgressBar *pg, bool bp=true, int min=0, int max=99);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -49,11 +50,8 @@ private slots:
     void on_toolFuncionalidad_clicked();
     void on_actionEliminar_Duplicados_triggered();
     void on_actionCMD_triggered();
-
-    void on_pushButton_clicked();
-
+    void on_btnTest_clicked();
     void on_actionGet_triggered();
-
 private:
     Ui::MainWindow *ui;
     QString m_sSettingsFile;
