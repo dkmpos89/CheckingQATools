@@ -35,6 +35,8 @@ public:
     QString saveFileName(const QUrl &url);
     bool validarCampos(int idx);
     void setConfigProgressBar(QProgressBar *pg, bool bp=true, int min=0, int max=99);
+    void addToHistorial(QStringList data);
+    void CursorCarga(bool b, int idx);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);

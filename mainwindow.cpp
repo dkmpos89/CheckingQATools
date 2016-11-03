@@ -86,8 +86,8 @@ void MainWindow::loadSettings()
 
 void MainWindow::init()
 {
-    ui->progressBar_tab1->setVisible(false);
-    ui->progressBar_tab2->setVisible(false);
+    setConfigProgressBar(ui->progressBar_tab1, false, 0, 0);
+    setConfigProgressBar(ui->progressBar_tab2, false, 0, 0);
     ui->btnGO->setEnabled(false);
     ui->btnEditar->setVisible(false);
 
@@ -119,6 +119,12 @@ void MainWindow::init()
     }
 /* End */
 
+/* Bloque de creaciones tabla Historial */
+    ui->historialTWidget->setColumnCount(7);
+    ui->historialTWidget->setHorizontalHeaderLabels(QStringList()<<"Date"<<"Product"<<"Project"<<"File Name"<<"URL"<<"Zip-file"<<"Status");
+    ui->historialTWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->historialTWidget->horizontalHeader()->setResizeContentsPrecision(QHeaderView::Stretch);
+/* End */
 }
 
 void MainWindow::initProcess()
@@ -186,7 +192,7 @@ void MainWindow::on_actionStart_triggered()
     }
     procPaExec->write(cmd.toLatin1());
     bloquarPanel(true);
-    // MostrarCursorCarga(true);
+    CursorCarga(true, idx);
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -350,7 +356,7 @@ void MainWindow::activarBotones(int idx)
         case 1: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
         case 2: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
         case 3: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
-        default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
+        default: break;
     }
 }
 
@@ -455,6 +461,52 @@ bool MainWindow::saveToDisk(const QString &filename, QIODevice *data)
 
     return true;
 }
+
+void MainWindow::addToHistorial(QStringList data)
+{
+    QString proyecto = "buscarProyecto(atr)"; //Se debe buscar el nombre del proyecto que tiene en checking asociado al atributo --> idealmente se deberia buscar en algun archivo de cnfiguraciones donde este la lista de los nombres.
+    QString url = "http://checking:8080/report/auditrep/Dimensions/"+proyecto+"/"+data[0]+"/"+data[1]+"/"+data[2]+"/auditrep.html";
+
+    int rowcont = ui->historialTWidget->rowCount();
+    ui->historialTWidget->setRowCount(rowcont+1);
+
+    QString fecha_actual = QDateTime::currentDateTime().toString("dd.MM.yyyy - hh:mm");
+
+    QToolButton *icotool = new QToolButton();
+    icotool->setIcon(QIcon(QPixmap(":/images/wr-icon.png")));
+    icotool->setIconSize(QSize(30,30));
+    icotool->setFixedHeight(30);
+    icotool->setFixedWidth(30);
+    icotool->setAutoRaise(true);
+    icotool->setText(QString::number(rowcont));
+
+    QLabel *urlabel = new QLabel();
+    urlabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    urlabel->setOpenExternalLinks(true);
+    urlabel->setTextFormat(Qt::RichText);
+    urlabel->setText("<a href=\""+url+"/\">Informe de violaciones</a>");
+
+    ui->historialTWidget->setItem(rowcont, 0, new QTableWidgetItem(fecha_actual));
+    ui->historialTWidget->setItem(rowcont, 1, new QTableWidgetItem(data[0]));
+    ui->historialTWidget->setItem(rowcont, 2, new QTableWidgetItem(data[1]));
+    ui->historialTWidget->setItem(rowcont, 3, new QTableWidgetItem(data[2]));
+    ui->historialTWidget->setCellWidget(rowcont, 4, urlabel);
+    ui->historialTWidget->setCellWidget(rowcont, 5, icotool);
+    ui->historialTWidget->setItem(rowcont, 6, new QTableWidgetItem("En ejecucion Checking-QA"));
+
+}
+
+void MainWindow::CursorCarga(bool b, int idx)
+{
+    switch(idx)
+    {
+        case 0: setConfigProgressBar(ui->progressBar_tab1, b, 0, 0); break;
+        case 1: setConfigProgressBar(ui->progressBar_tab2, b, 0, 0); break;
+        default: break;
+    }
+
+}
+
 /* Fin funciones de control */
 
 

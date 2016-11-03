@@ -10,5 +10,6 @@
         <file>images/cmd.png</file>
         <file>config/tfuncional_config.ini</file>
         <file>images/download.png</file>
+        <file>images/wr-icon.png</file>
     </qresource>
 </RCC>
