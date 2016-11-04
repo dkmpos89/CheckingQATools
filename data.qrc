@@ -4,12 +4,12 @@
         <file>images/pause.png</file>
         <file>images/play.png</file>
         <file>images/stop.png</file>
-        <file>config/checking_tools_settings.ini</file>
         <file>bin/dm_call.bat</file>
         <file>bin/paexec.exe</file>
         <file>images/cmd.png</file>
         <file>config/tfuncional_config.ini</file>
         <file>images/download.png</file>
         <file>images/wr-icon.png</file>
+        <file>config/checking_tools_settings.ini</file>
     </qresource>
 </RCC>

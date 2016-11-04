@@ -26,8 +26,10 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
-    procPaExec->kill();
-    procPaExec->close();
+    for (int i = 0; i < listadeProcesos.size(); ++i) {
+        listadeProcesos[i]->kill();
+        listadeProcesos[i]->close();
+    }
 }
 
 /* Funciones de Inicializacion */
@@ -92,7 +94,7 @@ void MainWindow::init()
     ui->btnEditar->setVisible(false);
 
 /* Bloque de creacion de proceso paexec */
-    initProcess();
+    procPaExec = initProcess();
 /* End */
 
 /* Bloque de creacion de la variable analizador --> se mueve a otro hilo para no congelar la interface*/
@@ -127,23 +129,26 @@ void MainWindow::init()
 /* End */
 }
 
-void MainWindow::initProcess()
+QProcess* MainWindow::initProcess()
 {
-    procPaExec = new QProcess(this);
-    procPaExec->setProcessChannelMode( QProcess::SeparateChannels );
-    procPaExec->start(UPDATER, ARGUMENTS, QProcess::ReadWrite);
-    procPaExec->waitForStarted(5000);
+    QProcess *proceso = new QProcess(this);
+    proceso->setProcessChannelMode( QProcess::SeparateChannels );
+    proceso->start(UPDATER, ARGUMENTS, QProcess::ReadWrite);
+    proceso->waitForStarted(5000);
 
     QString cmd("cd "+WORKING_DIR+"\n");
-    procPaExec->write(cmd.toLatin1());
-    procPaExec->waitForFinished(1000);
-    QByteArray ba = procPaExec->readAll();//clean stdout
+    proceso->write(cmd.toLatin1());
+    proceso->waitForFinished(1000);
+    QByteArray ba = proceso->readAll();//clean stdout
     Q_UNUSED(ba);
 
-    connect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
-    connect(procPaExec, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
+    connect(proceso, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+    connect(proceso, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
 
-    writeText("^ [Iniciando log del sistema... por favor espere]", msg_notify);
+    writeText("^ [Proceso inicializado. ID: "+QString::number(proceso->processId())+"]", msg_notify);
+
+    listadeProcesos.append(proceso);
+    return proceso;
 }
 
 void MainWindow::update_Geometry()
@@ -172,17 +177,27 @@ void MainWindow::update_Geometry()
 void MainWindow::on_actionStart_triggered()
 {
     QString cmd = "";
-    int idx = 0;
+    QStringList lista;
+    int idx = ui->tabWidget->currentIndex();
+
+    /* BLoque de carga de proyecto de checking */
+    QString key = "";
+    if(idx==0) key = ui->area_id_requests->currentText();
+    else if(idx==1) key = ui->area_id_baseline->currentText();
+
+    settings->beginGroup("projectchk");
+    QString projecNameCHK = settings->value(key).toString();
+    settings->endGroup();
+    /* BLoque de carga de proyecto de checking */
 
     if(procPaExec->state()==QProcess::Running){
-        idx = ui->tabWidget->currentIndex();
         if(validarCampos(idx)){
             if(idx==0){
-                QStringList lista = ( QStringList()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text()<<ui->area_id_requests->currentText() );;
-                cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_request.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+"\n";
+                lista = ( QStringList()<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text()<<ui->area_id_requests->currentText() );;
+                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[1]+" "+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+"\n";
             }else if(idx==1){
-                QStringList lista = ( QStringList()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text() );;
-                cmd = "START /B paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\certificacion_RDC.bat "+lista[0]+" "+lista[1]+" "+lista[2]+" "+lista[3]+" "+lista[4]+"\n";
+                lista = ( QStringList()<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text() );;
+                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[1]+" "+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
             }
         }else
             return;
@@ -190,9 +205,12 @@ void MainWindow::on_actionStart_triggered()
         writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
         return;
     }
-    procPaExec->write(cmd.toLatin1());
+
+
+    //procPaExec->write(cmd.toLatin1());
     bloquarPanel(true);
     CursorCarga(true, idx);
+    checkearSalida(lista);
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -392,15 +410,17 @@ bool MainWindow::validarCampos(int idx)
     {
         case 0: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text(); break;
         case 1: area = ui->area_id_baseline->currentText(); current_proj = ui->project_id_baseline->currentText(); imputData = ui->baseline_name->text(); break;
-    default: QMessageBox::warning(this,"CHKTools : ERROR!", "Imposible realizar el paso de validación!" ); return false; break;
+        default: QMessageBox::warning(this,"CHKTools : ERROR!", "Imposible realizar el paso de validación!" ); return false; break;
     }
+
+    //settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
     settings->beginGroup("project");
     project = settings->value(area).toString();
     settings->endGroup();
 
     if(imputData.isEmpty()){ mflag = false; QMessageBox::warning(this,"CHKTools : ERROR!", "Faltan datos!");}
 
-    //qInfo()<<area<<" - "<<current_proj<<" - "<<project<<endl;
+    qInfo()<<area<<" - "<<current_proj<<" - "<<project<<endl;
     if(current_proj!=project){ mflag = false; QMessageBox::warning(this,"CHKTools : ERROR!", "El area: "+area+" no coincide con el proyecto: "+current_proj);}
 
     return mflag;
@@ -504,6 +524,17 @@ void MainWindow::CursorCarga(bool b, int idx)
         case 1: setConfigProgressBar(ui->progressBar_tab2, b, 0, 0); break;
         default: break;
     }
+
+}
+
+void MainWindow::checkearSalida(QStringList arg)
+{
+    ui->statusBar->showMessage("Analizando: "+arg[4]+" por favor espere....", 5000);
+    QProcess *proSalida = initProcess();
+
+    //QStringList lista = ( QStringList()<<"\\\\192.168.10.63"<<"-u checking"<<"-p chm.321."<<"D:\\modelo_operativo_checking_4.2\\x_existfile.bat"<<"RDC"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3"<<"TEF" );
+    QString cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\x_existfile.bat "+arg[2]+" "+arg[3]+" "+arg[4]+" "+arg[5]+"\n";
+    proSalida->write(cmd.toLatin1());
 
 }
 

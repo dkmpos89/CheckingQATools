@@ -29,7 +29,7 @@ public:
     void loadSettings();
     void init();
     void writeText(QString text, int color);
-    void initProcess();
+    QProcess *initProcess();
     void activarBotones(int idx);
     bool saveToDisk(const QString &filename, QIODevice *data);
     QString saveFileName(const QUrl &url);
@@ -37,6 +37,7 @@ public:
     void setConfigProgressBar(QProgressBar *pg, bool bp=true, int min=0, int max=99);
     void addToHistorial(QStringList data);
     void CursorCarga(bool b, int idx);
+    void checkearSalida(QStringList arg);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -60,6 +61,7 @@ private:
     analizador* calc;
     QSettings *settings;
     QProcess *procPaExec;
+    QList<QProcess*> listadeProcesos;
 
     const QString UPDATER = QString("cmd");
     const QStringList ARGUMENTS = ( QStringList()<<"" );

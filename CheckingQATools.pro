@@ -33,3 +33,4 @@ RC_FILE = app_icon.rc
 
 QMAKE_CXXFLAGS += -std=gnu++11
 
+

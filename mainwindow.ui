@@ -36,6 +36,16 @@
   <property name="windowTitle">
    <string>CheckingTools</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#contenedorTab1 {
+     border: 1px solid gray;
+     border-radius: 2px;
+ }
+QWidget#contenedorTab2 {
+     border: 1px solid gray;
+     border-radius: 2px;
+ }</string>
+  </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="1">
@@ -52,7 +62,7 @@
        </font>
       </property>
       <property name="currentIndex">
-       <number>4</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -92,7 +102,7 @@
              </item>
             </layout>
            </item>
-           <item row="0" column="5">
+           <item row="0" column="6">
             <layout class="QVBoxLayout" name="verticalLayout_10">
              <item>
               <widget class="QLabel" name="label_9">
@@ -185,36 +195,6 @@
              </item>
             </layout>
            </item>
-           <item row="0" column="2">
-            <layout class="QVBoxLayout" name="verticalLayout_3">
-             <item>
-              <widget class="QLabel" name="label_3">
-               <property name="font">
-                <font>
-                 <weight>75</weight>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>PROJECT_ID</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="project_id_requests">
-               <property name="minimumSize">
-                <size>
-                 <width>170</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
            <item row="0" column="0">
             <layout class="QVBoxLayout" name="verticalLayout">
              <item>
@@ -257,6 +237,36 @@
              </item>
             </layout>
            </item>
+           <item row="0" column="2">
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>PROJECT_ID</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="project_id_requests">
+               <property name="minimumSize">
+                <size>
+                 <width>170</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
            <item row="0" column="1">
             <layout class="QVBoxLayout" name="verticalLayout_2">
              <item>
@@ -286,6 +296,13 @@
               </widget>
              </item>
             </layout>
+           </item>
+           <item row="0" column="5">
+            <widget class="Line" name="line_4">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -414,7 +431,7 @@
              </item>
             </layout>
            </item>
-           <item row="0" column="5">
+           <item row="0" column="6">
             <layout class="QVBoxLayout" name="verticalLayout_12">
              <item>
               <widget class="QLabel" name="label_11">
@@ -507,6 +524,41 @@
              </item>
             </layout>
            </item>
+           <item row="0" column="1">
+            <layout class="QVBoxLayout" name="verticalLayout_16">
+             <item>
+              <widget class="QLabel" name="label_15">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>PRODUCT_ID</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="product_id_baseline">
+               <property name="minimumSize">
+                <size>
+                 <width>147</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>RDC</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </item>
            <item row="0" column="0">
             <layout class="QVBoxLayout" name="verticalLayout_15">
              <item>
@@ -549,40 +601,12 @@
              </item>
             </layout>
            </item>
-           <item row="0" column="1">
-            <layout class="QVBoxLayout" name="verticalLayout_16">
-             <item>
-              <widget class="QLabel" name="label_15">
-               <property name="font">
-                <font>
-                 <weight>75</weight>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>PRODUCT_ID</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="product_id_baseline">
-               <property name="minimumSize">
-                <size>
-                 <width>147</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <item>
-                <property name="text">
-                 <string>RDC</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
+           <item row="0" column="5">
+            <widget class="Line" name="line_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -1018,7 +1042,7 @@
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionStart">
    <property name="icon">
-    <iconset resource="data.qrc">
+    <iconset>
      <normaloff>:/images/play.png</normaloff>:/images/play.png</iconset>
    </property>
    <property name="text">
@@ -1030,7 +1054,7 @@
   </action>
   <action name="actionQuit">
    <property name="icon">
-    <iconset resource="data.qrc">
+    <iconset>
      <normaloff>:/images/on.png</normaloff>:/images/on.png</iconset>
    </property>
    <property name="text">
@@ -1042,7 +1066,7 @@
   </action>
   <action name="actionStop">
    <property name="icon">
-    <iconset resource="data.qrc">
+    <iconset>
      <normaloff>:/images/stop.png</normaloff>:/images/stop.png</iconset>
    </property>
    <property name="text">
@@ -1067,7 +1091,7 @@
   </action>
   <action name="actionCMD">
    <property name="icon">
-    <iconset resource="data.qrc">
+    <iconset>
      <normaloff>:/images/cmd.png</normaloff>:/images/cmd.png</iconset>
    </property>
    <property name="text">
@@ -1076,7 +1100,7 @@
   </action>
   <action name="actionGet">
    <property name="icon">
-    <iconset resource="data.qrc">
+    <iconset>
      <normaloff>:/images/download.png</normaloff>:/images/download.png</iconset>
    </property>
    <property name="text">
@@ -1104,8 +1128,6 @@
    <header>console.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="data.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
