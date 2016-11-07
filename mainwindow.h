@@ -4,14 +4,14 @@
 #include <QMainWindow>
 #include <QSettings>
 #include "analizador.h"
-#include <QDir>
-#include <QProcess>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QNetworkProxy>
-#include <QUrl>
 #include <QProgressBar>
+#include <QProcess>
+#include <QUrl>
+#include <QDir>
 
 namespace Ui {
 class MainWindow;
@@ -30,7 +30,7 @@ public:
     void init();
     void writeText(QString text, int color);
     QProcess *initProcess();
-    void activarBotones(int idx);
+    void activarBotones(int idx, bool b);
     bool saveToDisk(const QString &filename, QIODevice *data);
     QString saveFileName(const QUrl &url);
     bool validarCampos(int idx);
@@ -43,8 +43,9 @@ public slots:
     void imprimirSalida(QStringList lista);
     void readOutput();
     void readError();
-    void bloquarPanel(bool val);
+    void bloquarPanel(bool val, int id);
     void downloadFinished(QNetworkReply *reply);
+    void readDotout();
 private slots:
     void on_actionStart_triggered();
     void on_btnSetear_clicked();
@@ -53,13 +54,15 @@ private slots:
     void on_toolFuncionalidad_clicked();
     void on_actionEliminar_Duplicados_triggered();
     void on_actionCMD_triggered();
-    void on_btnTest_clicked();
     void on_actionGet_triggered();
+    void on_actionTest_triggered();
+
 private:
     Ui::MainWindow *ui;
     QString m_sSettingsFile;
     analizador* calc;
     QSettings *settings;
+    QSettings *chkproperties;
     QProcess *procPaExec;
     QList<QProcess*> listadeProcesos;
 

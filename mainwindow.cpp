@@ -8,8 +8,7 @@
 #include "xlsxdocument.h"
 #include <QInputDialog>
 #include <QMessageBox>
-
-
+#include <QWebView>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -19,8 +18,15 @@ MainWindow::MainWindow(QWidget *parent) :
     m_sSettingsFile = QDir::currentPath()+"/config/checking_tools_settings.ini";
     loadSettings();
     init();
-    //ui->panel_trazabilidad->hide();
-    //QTimer::singleShot(100, this, SLOT(update_Geometry()));
+
+    /* Carga de configuraciones del servidor */
+    chkproperties = new QSettings(QDir::currentPath()+"/config/checking_properties.ini", QSettings::IniFormat);
+    chkproperties->beginGroup("servidor");
+    /* End */
+
+    //QWebView *webView = new QWebView();
+    ui->webView->load(QUrl("http://google.com"));
+
 }
 
 MainWindow::~MainWindow()
@@ -42,8 +48,11 @@ void MainWindow::loadSettings()
         QDir().mkdir(path);
         QFile::copy(":/config/checking_tools_settings.ini", path+"/checking_tools_settings.ini");
         QFile::copy(":/config/tfuncional_config.ini", path+"/tfuncional_config.ini");
+        QFile::copy(":/config/checking_properties.ini", path+"/checking_properties.ini");
+
         QFile::setPermissions(path+"/checking_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
         QFile::setPermissions(path+"/tfuncional_config.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+        QFile::setPermissions(path+"/checking_properties.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     }
     settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
 
@@ -92,6 +101,10 @@ void MainWindow::init()
     setConfigProgressBar(ui->progressBar_tab2, false, 0, 0);
     ui->btnGO->setEnabled(false);
     ui->btnEditar->setVisible(false);
+    ui->label_anal_requests->setVisible(false);
+    ui->label_anal_baseline->setVisible(false);
+    ui->label_nombre_requests->setVisible(false);
+    ui->label_nombre_baseline->setVisible(false);
 
 /* Bloque de creacion de proceso paexec */
     procPaExec = initProcess();
@@ -109,7 +122,12 @@ void MainWindow::init()
 /* End */
 
 /* Bloque de 'connect' para el cambio de pestañas */
-    connect(ui->tabWidget, &QTabWidget::currentChanged, [=] (const int idx) { activarBotones(idx);  });
+    //connect(ui->tabWidget, &QTabWidget::currentChanged, [=] (const int idx) { activarBotones(idx, true);  });
+/* End */
+
+/* Bloque de 'connect' para el cambio de Script AIM */
+    connect(ui->noAIM_requests, &QCheckBox::toggled, [=] (const bool cheked) { if(cheked) ui->name_script_requests->setText("x_certificacion_request.bat"); else ui->name_script_requests->setText("certificacion_request.bat");  });
+    connect(ui->noAIM_baseline, &QCheckBox::toggled, [=] (const bool cheked) { if(cheked) ui->name_script_baseline->setText("x_certificacion_RDC.bat"); else ui->name_script_baseline->setText("certificacion_RDC.bat");  });
 /* End */
 
 /* Bloque de creaciones del binario ../bin/paexec.exe */
@@ -193,11 +211,11 @@ void MainWindow::on_actionStart_triggered()
     if(procPaExec->state()==QProcess::Running){
         if(validarCampos(idx)){
             if(idx==0){
-                lista = ( QStringList()<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text()<<ui->area_id_requests->currentText() );;
-                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[1]+" "+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+"\n";
+                lista = ( QStringList()<<"0"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText().trimmed()<<ui->requests_id->text()<<ui->area_id_requests->currentText() );;
+                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
             }else if(idx==1){
-                lista = ( QStringList()<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text() );;
-                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[1]+" "+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
+                lista = ( QStringList()<<"1"<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text().trimmed()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text().trimmed() );;
+                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
             }
         }else
             return;
@@ -207,8 +225,8 @@ void MainWindow::on_actionStart_triggered()
     }
 
 
-    //procPaExec->write(cmd.toLatin1());
-    bloquarPanel(true);
+    procPaExec->write(cmd.toLatin1());
+    bloquarPanel(true,idx);
     CursorCarga(true, idx);
     checkearSalida(lista);
 }
@@ -341,6 +359,29 @@ void MainWindow::readError()
     writeText(error, Qt::red);
 }
 
+void MainWindow::readDotout()
+{
+    QObject *sender = QObject::sender();
+    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
+    int idx = procPaExec->objectName().toInt();
+
+    QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
+    if(buff.contains("ERR_TIMEOUT")){
+        writeText("^ [Tiempo de espera agotado] -------> Estado del analisis: TIMEOUT", msg_alert);
+        bloquarPanel(false, idx);
+        CursorCarga(false, idx);
+        return;
+    }
+
+    if(buff.contains("READYOUT")){
+        writeText("^ [Archivo '.out' encontrado] -------> Estado del analisis: FINALIZADO", msg_notify);
+        if(buff.contains("FAILOUT"))
+            writeText("^ [Archivo '.err' encontrado] -------> Estado del analisis: ERROR", msg_alert);
+        bloquarPanel(false, idx);
+        CursorCarga(false, idx);
+    }
+}
+
 void MainWindow::writeText(QString text, int color)
 {
     QString line = text;
@@ -366,28 +407,26 @@ void MainWindow::writeText(QString text, int color)
 
 }
 
-void MainWindow::activarBotones(int idx)
+void MainWindow::activarBotones(int idx, bool b)
 {
     switch(idx)
     {
-        case 0: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
-        case 1: ui->actionStart->setEnabled(true);ui->actionStop->setEnabled(true); break;
-        case 2: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
-        case 3: ui->actionStart->setEnabled(false);ui->actionStop->setEnabled(false); break;
+        case 0: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
+        case 1: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
+        case 2: break;
+        case 3: break;
         default: break;
     }
 }
 
-void MainWindow::bloquarPanel(bool val)
+void MainWindow::bloquarPanel(bool val, int id)
 {
-    ui->menuBar->setEnabled(!val);
-    int idx = ui->tabWidget->currentIndex();
+    activarBotones(id, !val);
+    int idx = id;
     switch(idx)
     {
         case 0: ui->contenedorTab1->setEnabled(!val); break;
         case 1: ui->contenedorTab2->setEnabled(!val); break;
-        //case 2: line.prepend(infoHtml.toLatin1()); break;
-        //case 3: line.prepend(infoHtml.toLatin1()); break;
         default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
 
@@ -396,6 +435,21 @@ void MainWindow::bloquarPanel(bool val)
 void MainWindow::setConfigProgressBar(QProgressBar *pg, bool bp, int min, int max){
     pg->setVisible(bp);
     pg->setRange(min, max);
+
+    switch(ui->tabWidget->currentIndex())
+    {
+        case 0: ui->label_anal_requests->setVisible(bp);
+                ui->label_nombre_requests->setText(ui->requests_id->text().trimmed());
+                ui->label_nombre_requests->setVisible(bp);
+                break;
+        case 1: ui->label_anal_baseline->setVisible(bp);
+                ui->label_nombre_baseline->setText(ui->baseline_name->text().trimmed());
+                ui->label_nombre_baseline->setVisible(bp);
+                break;
+        default: ui->statusBar->showMessage("Error pestaña no configurada.. ", 1000); break;
+    }
+
+
 }
 
 bool MainWindow::validarCampos(int idx)
@@ -408,8 +462,8 @@ bool MainWindow::validarCampos(int idx)
 
     switch(idx)
     {
-        case 0: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text(); break;
-        case 1: area = ui->area_id_baseline->currentText(); current_proj = ui->project_id_baseline->currentText(); imputData = ui->baseline_name->text(); break;
+        case 0: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text().trimmed(); break;
+        case 1: area = ui->area_id_baseline->currentText(); current_proj = ui->project_id_baseline->currentText(); imputData = ui->baseline_name->text().trimmed(); break;
         default: QMessageBox::warning(this,"CHKTools : ERROR!", "Imposible realizar el paso de validación!" ); return false; break;
     }
 
@@ -420,7 +474,7 @@ bool MainWindow::validarCampos(int idx)
 
     if(imputData.isEmpty()){ mflag = false; QMessageBox::warning(this,"CHKTools : ERROR!", "Faltan datos!");}
 
-    qInfo()<<area<<" - "<<current_proj<<" - "<<project<<endl;
+    //qInfo()<<area<<" - "<<current_proj<<" - "<<project<<endl;
     if(current_proj!=project){ mflag = false; QMessageBox::warning(this,"CHKTools : ERROR!", "El area: "+area+" no coincide con el proyecto: "+current_proj);}
 
     return mflag;
@@ -529,11 +583,14 @@ void MainWindow::CursorCarga(bool b, int idx)
 
 void MainWindow::checkearSalida(QStringList arg)
 {
-    ui->statusBar->showMessage("Analizando: "+arg[4]+" por favor espere....", 5000);
+    ui->statusBar->showMessage("Analizando: "+arg[5]+" por favor espere....", 5000);
     QProcess *proSalida = initProcess();
+    disconnect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+    connect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readDotout()) );
 
-    //QStringList lista = ( QStringList()<<"\\\\192.168.10.63"<<"-u checking"<<"-p chm.321."<<"D:\\modelo_operativo_checking_4.2\\x_existfile.bat"<<"RDC"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3"<<"TEF" );
-    QString cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\x_existfile.bat "+arg[2]+" "+arg[3]+" "+arg[4]+" "+arg[5]+"\n";
+    QString cmd = ""+chkproperties->value("exepa").toString()+" \\\\"+chkproperties->value("ip").toString()+" -u "+chkproperties->value("user").toString()+" -p "+chkproperties->value("pass").toString()+" "+chkproperties->value("pathmo").toString()+chkproperties->value("existfile").toString()+" "+arg[3]+" "+arg[4]+" "+arg[5]+" "+arg[1]+"\n";
+    writeText(cmd, msg_info);
+    proSalida->setObjectName(arg[0]);
     proSalida->write(cmd.toLatin1());
 
 }
@@ -544,16 +601,6 @@ void MainWindow::checkearSalida(QStringList arg)
 
 
 /* Zona de pruebas */
-void MainWindow::on_btnTest_clicked()
-{
-    QStringList lista = ( QStringList()<<"\\\\192.168.10.63"<<"-u checking"<<"-p chm.321."<<"D:\\modelo_operativo_checking_4.2\\x_existfile.bat"<<"RDC"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3"<<"TEF" );
-
-    QString cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\x_existfile.bat "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
-
-    procPaExec->write(cmd.toLatin1());
-
-}
-
 void MainWindow::on_actionGet_triggered()
 {
     QUrl iUrl("https://github.com/dkmpos89/softEGM_updates/raw/master/soft-updates.zip");
@@ -575,6 +622,11 @@ void MainWindow::on_actionGet_triggered()
 
     writeText("Descargando en .."+QDir::currentPath()+"/temp", msg_alert);
 }
+
+void MainWindow::on_actionTest_triggered()
+{
+    //QStringList lista = ( QStringList()<<"baseline"<<"PCB"<<"x_existfile.bat"<<"RDC"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3" );
+    //checkearSalida(lista);
+
+}
 /* Fin de la zona de pruebas */
-
-

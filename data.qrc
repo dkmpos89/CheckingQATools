@@ -11,5 +11,9 @@
         <file>images/download.png</file>
         <file>images/wr-icon.png</file>
         <file>config/checking_tools_settings.ini</file>
+        <file>bin/x_existfile.bat</file>
+        <file>images/marco_exterior.png</file>
+        <file>images/testing.png</file>
+        <file>config/checking_properties.ini</file>
     </qresource>
 </RCC>
