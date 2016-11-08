@@ -12,6 +12,8 @@
 #include <QProcess>
 #include <QUrl>
 #include <QDir>
+#include <QMediaPlayer>
+
 
 namespace Ui {
 class MainWindow;
@@ -38,6 +40,7 @@ public:
     void addToHistorial(QStringList data);
     void CursorCarga(bool b, int idx);
     void checkearSalida(QStringList arg);
+    void mkdirTemp(bool f, QString dir);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -46,6 +49,7 @@ public slots:
     void bloquarPanel(bool val, int id);
     void downloadFinished(QNetworkReply *reply);
     void readDotout();
+    void mostrarSalidaDM(bool b, QString s);
 private slots:
     void on_actionStart_triggered();
     void on_btnSetear_clicked();
@@ -57,6 +61,8 @@ private slots:
     void on_actionGet_triggered();
     void on_actionTest_triggered();
 
+    void on_actionProxy_Settings_triggered();
+
 private:
     Ui::MainWindow *ui;
     QString m_sSettingsFile;
@@ -65,6 +71,7 @@ private:
     QSettings *chkproperties;
     QProcess *procPaExec;
     QList<QProcess*> listadeProcesos;
+    QMediaPlayer *player;
 
     const QString UPDATER = QString("cmd");
     const QStringList ARGUMENTS = ( QStringList()<<"" );

@@ -9,10 +9,12 @@
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QNetworkProxy>
+#include <QUrl>
 #include <QSslError>
 #include <QStringList>
 #include <QTimer>
-#include <QUrl>
+
 
 QT_BEGIN_NAMESPACE
 class QSslError;
@@ -34,6 +36,7 @@ public:
     QString saveFileName(const QUrl &url);
     bool saveToDisk(const QString &filename, QIODevice *data);
     void setProxy(QString HostName, qint16 port);
+    QNetworkProxy getProxy(){ return manager.proxy(); }
 signals:
     void downFinished(bool b, QString msg);
 public slots:

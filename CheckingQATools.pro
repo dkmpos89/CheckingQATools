@@ -5,7 +5,7 @@
 #-------------------------------------------------
 
 QT += core gui network
-QT += webkitwidgets
+QT += webkitwidgets multimedia
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -18,14 +18,19 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     codeeditor.cpp \
     analizador.cpp \
-    console.cpp
+    console.cpp \
+    downloadmanager.cpp \
+    proxysettings.cpp
 
 HEADERS  += mainwindow.h \
     codeeditor.h \
     analizador.h \
-    console.h
+    console.h \
+    downloadmanager.h \
+    proxysettings.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    proxysettings.ui
 
 RESOURCES += \
     data.qrc
@@ -33,5 +38,3 @@ RESOURCES += \
 RC_FILE = app_icon.rc
 
 QMAKE_CXXFLAGS += -std=gnu++11
-
-

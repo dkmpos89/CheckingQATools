@@ -1,35 +1,19 @@
 #include "downloadmanager.h"
-#include <QLoggingCategory>
+#include "QDir"
 #include <QNetworkProxy>
-#include <QDir>
+
 
 DownloadManager::DownloadManager(QObject *parent) : QObject(parent)
 {
-    QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
-    connect(&manager, SIGNAL(finished(QNetworkReply*)), SLOT(downloadFinished(QNetworkReply*)));
+    connect(&manager, SIGNAL(finished(QNetworkReply*)),SLOT(downloadFinished(QNetworkReply*)));
 }
 
 void DownloadManager::setProxy(QString HostName, qint16 port)
 {
-//    QNetworkProxy myProxy;
-//    myProxy.setHostName(HostName);
-//    myProxy.setPort(port);
-//    manager.setProxy(myProxy);
-
-    (void)HostName;
-    (void)port;
-
-
-    /* Proxy SETTINGS: Carga el proxy al network manager */
-    QList<QNetworkProxy> listOfProxies = QNetworkProxyFactory::systemProxyForQuery();
-
-    if (listOfProxies.count() !=0){
-        if (listOfProxies.at(0).type() != QNetworkProxy::NoProxy)
-        {
-            //QNetworkProxy::setApplicationProxy(listOfProxies.at(0));
-            manager.setProxy(listOfProxies.at(0));
-        }
-    }
+    QNetworkProxy myProxy;
+    myProxy.setHostName(HostName);
+    myProxy.setPort(port);
+    manager.setProxy(myProxy);
 }
 
 void DownloadManager::doDownload(const QUrl &url)
@@ -61,13 +45,11 @@ QString DownloadManager::saveFileName(const QUrl &url)
 
         basename += QString::number(i);
     }
-
     return basename;
 }
 
 bool DownloadManager::saveToDisk(const QString &filename, QIODevice *data)
 {
-    //filename.prepend((QDir::currentPath()+"/reportes/").toLatin1());
     QFile file(filename);
     if (!file.open(QIODevice::WriteOnly)) {
         fprintf(stderr, "Could not open %s for writing: %s\n",
@@ -97,17 +79,16 @@ void DownloadManager::downloadFinished(QNetworkReply *reply)
     QString msg;
     QUrl url = reply->url();
     if (reply->error()) {
-        msg = "Download failed: "+reply->errorString();
+        msg = "Download failed: "+reply->errorString()+"\n";
         emit downFinished(false, msg);
     } else {
         QString filename = saveFileName(url);
-        filename.prepend(QDir::currentPath()+"/reportes/");
+        filename.prepend(QDir::currentPath()+"/temp/");
         if (saveToDisk(filename, reply))
-            msg = "Download succeeded (saved to "+filename+")";
+            msg = "Download succeeded (saved to "+filename+")\n";
         emit downFinished(true, msg);
     }
 
     currentDownloads.removeAll(reply);
     reply->deleteLater();
 }
-

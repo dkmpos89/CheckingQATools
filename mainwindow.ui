@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>900</width>
-    <height>577</height>
+    <width>965</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,12 +19,12 @@
   <property name="minimumSize">
    <size>
     <width>900</width>
-    <height>0</height>
+    <height>600</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>900</width>
+    <width>16777215</width>
     <height>16777215</height>
    </size>
   </property>
@@ -62,7 +62,7 @@ QWidget#contenedorTab2 {
        </font>
       </property>
       <property name="currentIndex">
-       <number>5</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -71,6 +71,11 @@ QWidget#contenedorTab2 {
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
          <widget class="QWidget" name="contenedorTab1" native="true">
+          <property name="font">
+           <font>
+            <pointsize>8</pointsize>
+           </font>
+          </property>
           <layout class="QGridLayout" name="gridLayout_7">
            <item row="0" column="3">
             <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -94,7 +99,7 @@ QWidget#contenedorTab2 {
               <widget class="QLineEdit" name="requests_id">
                <property name="minimumSize">
                 <size>
-                 <width>170</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -127,6 +132,9 @@ QWidget#contenedorTab2 {
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Minimum</enum>
+                 </property>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>40</width>
@@ -152,6 +160,9 @@ QWidget#contenedorTab2 {
                 <spacer name="horizontalSpacer_4">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Minimum</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -185,9 +196,15 @@ QWidget#contenedorTab2 {
              </item>
              <item>
               <widget class="QComboBox" name="area_id_requests">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>100</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -220,7 +237,7 @@ QWidget#contenedorTab2 {
               <widget class="QLineEdit" name="name_script_requests">
                <property name="minimumSize">
                 <size>
-                 <width>147</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -257,9 +274,15 @@ QWidget#contenedorTab2 {
              </item>
              <item>
               <widget class="QComboBox" name="project_id_requests">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>170</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -287,9 +310,15 @@ QWidget#contenedorTab2 {
              </item>
              <item>
               <widget class="QComboBox" name="product_id_requests">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>147</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -406,7 +435,7 @@ QWidget#contenedorTab2 {
               <widget class="QLineEdit" name="baseline_name">
                <property name="minimumSize">
                 <size>
-                 <width>170</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -434,9 +463,15 @@ QWidget#contenedorTab2 {
              </item>
              <item>
               <widget class="QComboBox" name="area_id_baseline">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>100</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -469,6 +504,9 @@ QWidget#contenedorTab2 {
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Minimum</enum>
+                 </property>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>40</width>
@@ -494,6 +532,9 @@ QWidget#contenedorTab2 {
                 <spacer name="horizontalSpacer_8">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Minimum</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -527,9 +568,15 @@ QWidget#contenedorTab2 {
              </item>
              <item>
               <widget class="QComboBox" name="project_id_baseline">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>170</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -557,9 +604,15 @@ QWidget#contenedorTab2 {
              </item>
              <item>
               <widget class="QComboBox" name="product_id_baseline">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>147</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -597,7 +650,7 @@ QWidget#contenedorTab2 {
               <widget class="QLineEdit" name="name_script_baseline">
                <property name="minimumSize">
                 <size>
-                 <width>147</width>
+                 <width>0</width>
                  <height>0</height>
                 </size>
                </property>
@@ -945,7 +998,7 @@ QWidget#contenedorTab2 {
         <string>Page</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_11">
-        <item row="0" column="0">
+        <item row="1" column="0">
          <widget class="QWebView" name="webView">
           <property name="url">
            <url>
@@ -953,6 +1006,9 @@ QWidget#contenedorTab2 {
            </url>
           </property>
          </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLineEdit" name="urlwebpage"/>
         </item>
        </layout>
       </widget>
@@ -965,7 +1021,7 @@ QWidget#contenedorTab2 {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>900</width>
+     <width>965</width>
      <height>21</height>
     </rect>
    </property>
@@ -983,6 +1039,7 @@ QWidget#contenedorTab2 {
      <string>Configuraciones</string>
     </property>
     <addaction name="actionSalida_compuesta"/>
+    <addaction name="actionProxy_Settings"/>
    </widget>
    <widget class="QMenu" name="menuAyuda">
     <property name="title">
@@ -1039,8 +1096,9 @@ QWidget#contenedorTab2 {
    <addaction name="separator"/>
    <addaction name="actionGet"/>
    <addaction name="separator"/>
-   <addaction name="separator"/>
    <addaction name="actionTest"/>
+   <addaction name="separator"/>
+   <addaction name="actionProxy_Settings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionStart">
@@ -1119,10 +1177,19 @@ QWidget#contenedorTab2 {
   <action name="actionTest">
    <property name="icon">
     <iconset resource="data.qrc">
-     <normaloff>:/images/testing.png</normaloff>:/images/testing.png</iconset>
+     <normaloff>:/images/sound.png</normaloff>:/images/sound.png</iconset>
    </property>
    <property name="text">
     <string>Test</string>
+   </property>
+  </action>
+  <action name="actionProxy_Settings">
+   <property name="icon">
+    <iconset resource="data.qrc">
+     <normaloff>:/images/testing.png</normaloff>:/images/testing.png</iconset>
+   </property>
+   <property name="text">
+    <string>Proxy Settings</string>
    </property>
   </action>
  </widget>
@@ -1134,15 +1201,15 @@ QWidget#contenedorTab2 {
    <header>QtWebKitWidgets/QWebView</header>
   </customwidget>
   <customwidget>
+   <class>Console</class>
+   <extends>QPlainTextEdit</extends>
+   <header>console.h</header>
+  </customwidget>
+  <customwidget>
    <class>CodeEditor</class>
    <extends>QPlainTextEdit</extends>
    <header>codeeditor.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>Console</class>
-   <extends>QPlainTextEdit</extends>
-   <header>console.h</header>
   </customwidget>
  </customwidgets>
  <resources>

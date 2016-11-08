@@ -1,14 +1,19 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "downloadmanager.h"
+#include "proxysettings.h"
+#include "xlsxdocument.h"
 #include <QDebug>
 #include <QDesktopWidget>
 #include <QThread>
 #include <QTimer>
 #include <QFileDialog>
-#include "xlsxdocument.h"
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QWebView>
+#include <QLoggingCategory>
+
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -24,8 +29,9 @@ MainWindow::MainWindow(QWidget *parent) :
     chkproperties->beginGroup("servidor");
     /* End */
 
+    QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
     //QWebView *webView = new QWebView();
-    ui->webView->load(QUrl("http://google.com"));
+    ui->webView->load(QUrl("http://checking:8080/checking/dashboard/view.run?category=projects"));
 
 }
 
@@ -41,6 +47,13 @@ MainWindow::~MainWindow()
 /* Funciones de Inicializacion */
 void MainWindow::loadSettings()
 {
+    /* QMEDIAPLAYER: crecacion del directorio 'sounds' y carga del archivo '.mp3' */
+    QString soundspath = QDir::currentPath()+"/sounds";
+    if(!QDir(soundspath).exists()){
+        QDir().mkdir(soundspath);
+        QFile::copy(":/sounds/eco_de_campanas.mp3", soundspath+"/eco_de_campanas.mp3");
+    }
+
     /* SETTINGS: crecacion del directorio 'config' y carga de los archivos '.ini' */
     QString tmp="";
     QString path = QDir::currentPath()+"/config";
@@ -56,7 +69,7 @@ void MainWindow::loadSettings()
     }
     settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
 
-    /* SETTINGS: comboBox de ID DE PRODUCTO */
+    /* SETTINGS: carga del comboBox de ID DE PRODUCTO */
     settings->beginGroup("product");
     QStringList listaKeys = settings->childKeys();
 
@@ -67,7 +80,7 @@ void MainWindow::loadSettings()
     }
     settings->endGroup();
 
-    /* SETTINGS: comboBox de ID DE PROYECTO */
+    /* SETTINGS: carga del comboBox de ID DE PROYECTO */
     settings->beginGroup("project");
     QStringList listaProject = settings->childKeys();
 
@@ -81,7 +94,7 @@ void MainWindow::loadSettings()
     }
     settings->endGroup();
 
-    /* SETTINGS: comboBox de trazabilodad funcional */
+    /* SETTINGS: carga del comboBox de trazabilodad funcional */
     QString m_SFile = QDir::currentPath()+"/config/tfuncional_config.ini";
     QSettings *config = new QSettings(m_SFile, QSettings::IniFormat);
     QStringList listaGrupos = config->childGroups();
@@ -93,6 +106,9 @@ void MainWindow::loadSettings()
     ui->planillaExcel->setText(config->value("planilla").toString());
     ui->funcionalidadExcel->setText(config->value("funcionalidad").toString());
     config->endGroup();
+
+    /* Crear el sub-directorio de reportes */
+    mkdirTemp(true, "reportes");
 }
 
 void MainWindow::init()
@@ -110,7 +126,13 @@ void MainWindow::init()
     procPaExec = initProcess();
 /* End */
 
-/* Bloque de creacion de la variable analizador --> se mueve a otro hilo para no congelar la interface*/
+/* Bloque de creacion de de reproductor de sonidos */
+    player = new QMediaPlayer;
+    QString pathToSound = QDir::currentPath()+"/sounds/eco_de_campanas.mp3";;
+    player->setMedia(QUrl::fromLocalFile(pathToSound));
+/* End */
+
+/* Bloque de creacion de la variable analizador --> se mueve a otro hilo para no congelar la interfaz*/
     QThread* thread = new QThread(this);
     calc = new analizador(NULL);
     calc->moveToThread(thread);
@@ -163,30 +185,10 @@ QProcess* MainWindow::initProcess()
     connect(proceso, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
     connect(proceso, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
 
-    writeText("^ [Proceso inicializado. ID: "+QString::number(proceso->processId())+"]", msg_notify);
+    writeText("Nuevo proceso creado. ID: "+QString::number(proceso->processId()), msg_notify);
 
     listadeProcesos.append(proceso);
     return proceso;
-}
-
-void MainWindow::update_Geometry()
-{
-    double px,py,w,h;
-    QRect pantalla = this->geometry();
-    px = pantalla.x();
-    py = pantalla.y();
-
-    int idx = ui->tabWidget->currentIndex();
-    if(idx==2){
-        ui->panel_trazabilidad->show();
-        w = 900;
-        h = 600;
-    }else{
-        ui->panel_trazabilidad->hide();
-        w = 900;
-        h = 220;
-    }
-    this->setGeometry(px,py,w,h);
 }
 /* Fin de las funciones de Inicializacion */
 
@@ -334,7 +336,27 @@ void MainWindow::on_actionCMD_triggered()
 /* Fin Menus y Botones */
 
 
-/* Funciones de control */
+/* Slots de control para los connect */
+void MainWindow::update_Geometry()
+{
+    double px,py,w,h;
+    QRect pantalla = this->geometry();
+    px = pantalla.x();
+    py = pantalla.y();
+
+    int idx = ui->tabWidget->currentIndex();
+    if(idx==2){
+        ui->panel_trazabilidad->show();
+        w = 900;
+        h = 600;
+    }else{
+        ui->panel_trazabilidad->hide();
+        w = 900;
+        h = 220;
+    }
+    this->setGeometry(px,py,w,h);
+}
+
 void MainWindow::imprimirSalida(QStringList lista)
 {
     ui->textAreaSalida->clear();
@@ -382,43 +404,6 @@ void MainWindow::readDotout()
     }
 }
 
-void MainWindow::writeText(QString text, int color)
-{
-    QString line = text;
-
-    QTextCursor cursor = ui->terminal->textCursor();
-    QString alertHtml = "<font color=\"red\">";
-    QString notifyHtml = "<font color=\"blue\">";
-    QString infoHtml = "<font color=\"green\">";
-    QString endHtml = "</font><br>";
-
-    switch(color)
-    {
-        case msg_alert: line.prepend(alertHtml.toLatin1()); break;
-        case msg_notify: line.prepend(notifyHtml.toLatin1()); break;
-        case msg_info: line.prepend(infoHtml.toLatin1()); break;
-        default: line.prepend(infoHtml.toLatin1()); break;
-    }
-
-    line = line.append(endHtml.toLatin1());
-    ui->terminal->putData(line);
-    cursor.movePosition(QTextCursor::End);
-    ui->terminal->setTextCursor(cursor);
-
-}
-
-void MainWindow::activarBotones(int idx, bool b)
-{
-    switch(idx)
-    {
-        case 0: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
-        case 1: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
-        case 2: break;
-        case 3: break;
-        default: break;
-    }
-}
-
 void MainWindow::bloquarPanel(bool val, int id)
 {
     activarBotones(id, !val);
@@ -430,6 +415,40 @@ void MainWindow::bloquarPanel(bool val, int id)
         default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
 
+}
+
+void MainWindow::downloadFinished(QNetworkReply *reply)
+{
+    QString msg;
+    QUrl url = reply->url();
+    if (reply->error()) {
+        writeText("Download failed: "+reply->errorString()+"\n", msg_alert);
+        //emit downFinished(false, msg);
+    } else {
+        QString filename = saveFileName(url);
+        QString path = QDir::currentPath()+"/temp";
+        QDir().mkdir(path);
+        filename.prepend(QDir::currentPath()+"/temp/");
+        if (saveToDisk(filename, reply))
+            writeText("Download succeeded (saved to "+filename+")\n", msg_alert);
+        //emit downFinished(true, msg);
+    }
+    reply->deleteLater();
+}
+/* Fin de Slots de control */
+
+
+/* Funciones de control */
+void MainWindow::activarBotones(int idx, bool b)
+{
+    switch(idx)
+    {
+        case 0: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
+        case 1: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
+        case 2: break;
+        case 3: break;
+        default: break;
+    }
 }
 
 void MainWindow::setConfigProgressBar(QProgressBar *pg, bool bp, int min, int max){
@@ -479,25 +498,6 @@ bool MainWindow::validarCampos(int idx)
 
     return mflag;
 
-}
-
-void MainWindow::downloadFinished(QNetworkReply *reply)
-{
-    QString msg;
-    QUrl url = reply->url();
-    if (reply->error()) {
-        writeText("Download failed: "+reply->errorString()+"\n", msg_alert);
-        //emit downFinished(false, msg);
-    } else {
-        QString filename = saveFileName(url);
-        QString path = QDir::currentPath()+"/temp";
-        QDir().mkdir(path);
-        filename.prepend(QDir::currentPath()+"/temp/");
-        if (saveToDisk(filename, reply))
-            writeText("Download succeeded (saved to "+filename+")\n", msg_alert);
-        //emit downFinished(true, msg);
-    }
-    reply->deleteLater();
 }
 
 QString MainWindow::saveFileName(const QUrl &url)
@@ -595,6 +595,46 @@ void MainWindow::checkearSalida(QStringList arg)
 
 }
 
+void MainWindow::writeText(QString text, int color)
+{
+    QString line = text;
+
+    QTextCursor cursor = ui->terminal->textCursor();
+    QString alertHtml = "<font color=\"red\">";
+    QString notifyHtml = "<font color=\"blue\">";
+    QString infoHtml = "<font color=\"green\">";
+    QString endHtml = "</font><br>";
+
+    switch(color)
+    {
+        case msg_alert: line.prepend(alertHtml.toLatin1()); break;
+        case msg_notify: line.prepend(notifyHtml.toLatin1()); break;
+        case msg_info: line.prepend(infoHtml.toLatin1()); break;
+        default: line.prepend(infoHtml.toLatin1()); break;
+    }
+
+    line = line.append(endHtml.toLatin1());
+    ui->terminal->putData(line);
+    cursor.movePosition(QTextCursor::End);
+    ui->terminal->setTextCursor(cursor);
+
+}
+
+void MainWindow::mkdirTemp(bool f, QString dir)
+{
+    writeText("Directorio temporal ../../"+dir+"", msg_notify);
+    QString path = QDir::currentPath()+"/"+dir+"";
+
+    if(f){
+        if(!QDir(path).exists())
+            QDir().mkdir(path);
+        writeText("^ [OK]", msg_info);
+    }else{
+        if(QDir(path).exists())
+            QDir().rmdir(path);
+        writeText("^ [NO]", msg_info);
+    }
+}
 /* Fin funciones de control */
 
 
@@ -603,30 +643,38 @@ void MainWindow::checkearSalida(QStringList arg)
 /* Zona de pruebas */
 void MainWindow::on_actionGet_triggered()
 {
-    QUrl iUrl("https://github.com/dkmpos89/softEGM_updates/raw/master/soft-updates.zip");
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    DownloadManager *downManager = new DownloadManager(this);
+    //QString url("https://github.com/dkmpos89/softEGM_updates/raw/master/soft-updates.zip");
+    QString url("https://raw.githubusercontent.com/dkmpos89/softEGM_updates/master/soft-emg-version.xml");
 
-    QNetworkProxyQuery npq(iUrl);
-    QList<QNetworkProxy> listOfProxies = QNetworkProxyFactory::systemProxyForQuery(npq);
+    const QUrl iUrl(url);
+    downManager->setProxy("192.168.10.52", 80);
+    downManager->doDownload(iUrl);
 
-    if (listOfProxies.count() !=0){
-        if (listOfProxies.at(0).type() != QNetworkProxy::NoProxy)    {
-            manager->setProxy(listOfProxies.at(0));
-            writeText( "Using Proxy " + listOfProxies.at(0).hostName()+"\n", msg_info);
-        }
-    }
+    connect(downManager, SIGNAL(downFinished(bool, QString)), this, SLOT(mostrarSalidaDM(bool, QString)) );
 
-    connect(manager, &QNetworkAccessManager::finished, [=](QNetworkReply* rep) { downloadFinished(rep); } );
-
-    manager->get(QNetworkRequest(iUrl));
-
-    writeText("Descargando en .."+QDir::currentPath()+"/temp", msg_alert);
+    writeText("Descargando archivo en: "+QDir::currentPath()+"/temp", msg_notify);
 }
 
 void MainWindow::on_actionTest_triggered()
 {
-    //QStringList lista = ( QStringList()<<"baseline"<<"PCB"<<"x_existfile.bat"<<"RDC"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3"<<"TEF"<<"BOTEF_ADM_SAVSEG_PP_TEF_2925_V3" );
-    //checkearSalida(lista);
+    player->setVolume(50);
+    player->play();
 
 }
+
+void MainWindow::mostrarSalidaDM(bool b, QString s)
+{
+    if(b) writeText("^ ["+s+" ]",msg_info);
+    else writeText("^ ["+s+" ]",msg_alert);
+}
+
+void MainWindow::on_actionProxy_Settings_triggered()
+{
+    ProxySettings *proxyssetings = new ProxySettings;
+    proxyssetings->exec();
+}
+
 /* Fin de la zona de pruebas */
+
+

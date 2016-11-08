@@ -15,5 +15,7 @@
         <file>images/marco_exterior.png</file>
         <file>images/testing.png</file>
         <file>config/checking_properties.ini</file>
+        <file>sounds/eco_de_campanas.mp3</file>
+        <file>images/sound.png</file>
     </qresource>
 </RCC>
