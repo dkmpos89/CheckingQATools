@@ -69,9 +69,9 @@ private:
     analizador* calc;
     QSettings *settings;
     QSettings *chkproperties;
-    QProcess *procPaExec;
     QList<QProcess*> listadeProcesos;
     QMediaPlayer *player;
+    int cvolume = 50;
 
     const QString UPDATER = QString("cmd");
     const QStringList ARGUMENTS = ( QStringList()<<"" );

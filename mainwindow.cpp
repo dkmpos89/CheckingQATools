@@ -10,9 +10,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
-#include <QWebView>
 #include <QLoggingCategory>
-
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -21,16 +19,15 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     m_sSettingsFile = QDir::currentPath()+"/config/checking_tools_settings.ini";
-    loadSettings();
-    init();
 
-    /* Carga de configuraciones del servidor */
+    loadSettings();
+    /* Carga de configuraciones del servidor y seteo de cosas extras */
     chkproperties = new QSettings(QDir::currentPath()+"/config/checking_properties.ini", QSettings::IniFormat);
     chkproperties->beginGroup("servidor");
     /* End */
+    init();
 
     QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
-    //QWebView *webView = new QWebView();
     ui->webView->load(QUrl("http://checking:8080/checking/dashboard/view.run?category=projects"));
 
 }
@@ -122,14 +119,12 @@ void MainWindow::init()
     ui->label_nombre_requests->setVisible(false);
     ui->label_nombre_baseline->setVisible(false);
 
-/* Bloque de creacion de proceso paexec */
-    procPaExec = initProcess();
-/* End */
-
 /* Bloque de creacion de de reproductor de sonidos */
     player = new QMediaPlayer;
-    QString pathToSound = QDir::currentPath()+"/sounds/eco_de_campanas.mp3";;
+    QString pathToSound = QDir::currentPath()+"/sounds/"+chkproperties->value("soundname").toString()+"";;
     player->setMedia(QUrl::fromLocalFile(pathToSound));
+    cvolume = chkproperties->value("soundvolume").toInt();
+    player->setVolume(cvolume);
 /* End */
 
 /* Bloque de creacion de la variable analizador --> se mueve a otro hilo para no congelar la interfaz*/
@@ -196,36 +191,39 @@ QProcess* MainWindow::initProcess()
 /* Funciones de los Menus y Botones */
 void MainWindow::on_actionStart_triggered()
 {
+    QProcess *procPaExec;
     QString cmd = "";
+    QString key = "";
     QStringList lista;
     int idx = ui->tabWidget->currentIndex();
 
-    /* BLoque de carga de proyecto de checking */
-    QString key = "";
-    if(idx==0) key = ui->area_id_requests->currentText();
-    else if(idx==1) key = ui->area_id_baseline->currentText();
+    if(validarCampos(idx)){
+        procPaExec = initProcess();
 
-    settings->beginGroup("projectchk");
-    QString projecNameCHK = settings->value(key).toString();
-    settings->endGroup();
-    /* BLoque de carga de proyecto de checking */
+        /* BLoque de carga de proyecto de checking */
+        if(idx==0) key = ui->area_id_requests->currentText();
+        else if(idx==1) key = ui->area_id_baseline->currentText();
 
-    if(procPaExec->state()==QProcess::Running){
-        if(validarCampos(idx)){
-            if(idx==0){
-                lista = ( QStringList()<<"0"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText().trimmed()<<ui->requests_id->text()<<ui->area_id_requests->currentText() );;
-                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
-            }else if(idx==1){
-                lista = ( QStringList()<<"1"<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text().trimmed()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text().trimmed() );;
-                cmd = "paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -d D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
+        settings->beginGroup("projectchk");
+        QString projecNameCHK = settings->value(key).toString();
+        settings->endGroup();
+        /* BLoque de carga de proyecto de checking */
+
+        if(procPaExec->state()==QProcess::Running){
+            if(idx==1){
+                lista = ( QStringList()<<"1"<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text().trimmed()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text().trimmed() );
+                cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
+            }else if(idx==2){
+                lista = ( QStringList()<<"0"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text().trimmed()<<ui->area_id_requests->currentText() );
+                cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
             }
-        }else
+        }else{
+            writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
             return;
+        }
     }else{
-        writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
         return;
     }
-
 
     procPaExec->write(cmd.toLatin1());
     bloquarPanel(true,idx);
@@ -323,15 +321,15 @@ void MainWindow::on_actionEliminar_Duplicados_triggered()
 
 void MainWindow::on_actionCMD_triggered()
 {
-    bool ok;
-    // Ask for birth date as a string.
-    QString text = QInputDialog::getText(0, "Linea de comandos_",
-                                         "Ingrese:", QLineEdit::Normal,
-                                         "", &ok);
-    if (ok && !text.isEmpty()) {
-        if(procPaExec->state()==QProcess::Running)
-            procPaExec->write(text.toLatin1()+"\n");
-    }
+//    bool ok;
+//    // Ask for birth date as a string.
+//    QString text = QInputDialog::getText(0, "Linea de comandos_",
+//                                         "Ingrese:", QLineEdit::Normal,
+//                                         "", &ok);
+//    if (ok && !text.isEmpty()) {
+//        if(procPaExec->state()==QProcess::Running)
+//            procPaExec->write(text.toLatin1()+"\n");
+//    }
 }
 /* Fin Menus y Botones */
 
@@ -389,18 +387,20 @@ void MainWindow::readDotout()
 
     QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
     if(buff.contains("ERR_TIMEOUT")){
-        writeText("^ [Tiempo de espera agotado] -------> Estado del analisis: TIMEOUT", msg_alert);
+        writeText("^ [Tiempo de espera agotado] - Estado del analisis: TIMEOUT", msg_alert);
         bloquarPanel(false, idx);
         CursorCarga(false, idx);
+        player->play();
         return;
     }
 
     if(buff.contains("READYOUT")){
-        writeText("^ [Archivo '.out' encontrado] -------> Estado del analisis: FINALIZADO", msg_notify);
+        writeText("^ [Archivo '.out' encontrado] - Estado del analisis: FINALIZADO", msg_notify);
         if(buff.contains("FAILOUT"))
-            writeText("^ [Archivo '.err' encontrado] -------> Estado del analisis: ERROR", msg_alert);
+            writeText("^ [Archivo '.err' encontrado] - Estado del analisis: ERROR", msg_alert);
         bloquarPanel(false, idx);
         CursorCarga(false, idx);
+        player->play();
     }
 }
 
@@ -410,8 +410,8 @@ void MainWindow::bloquarPanel(bool val, int id)
     int idx = id;
     switch(idx)
     {
-        case 0: ui->contenedorTab1->setEnabled(!val); break;
         case 1: ui->contenedorTab2->setEnabled(!val); break;
+        case 2: ui->contenedorTab1->setEnabled(!val); break;
         default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
 
@@ -574,8 +574,14 @@ void MainWindow::CursorCarga(bool b, int idx)
 {
     switch(idx)
     {
-        case 0: setConfigProgressBar(ui->progressBar_tab1, b, 0, 0); break;
-        case 1: setConfigProgressBar(ui->progressBar_tab2, b, 0, 0); break;
+        case 1: setConfigProgressBar(ui->progressBar_tab2, b, 0, 0);
+                ui->label_anal_baseline->setVisible(b);
+                ui->label_nombre_baseline->setVisible(b);
+                break;
+        case 2: setConfigProgressBar(ui->progressBar_tab1, b, 0, 0);
+                ui->label_anal_requests->setVisible(b);
+                ui->label_nombre_requests->setVisible(b);
+                break;
         default: break;
     }
 
@@ -588,7 +594,7 @@ void MainWindow::checkearSalida(QStringList arg)
     disconnect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
     connect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readDotout()) );
 
-    QString cmd = ""+chkproperties->value("exepa").toString()+" \\\\"+chkproperties->value("ip").toString()+" -u "+chkproperties->value("user").toString()+" -p "+chkproperties->value("pass").toString()+" "+chkproperties->value("pathmo").toString()+chkproperties->value("existfile").toString()+" "+arg[3]+" "+arg[4]+" "+arg[5]+" "+arg[1]+"\n";
+    QString cmd = "START /B /WAIT "+chkproperties->value("exepa").toString()+" \\\\"+chkproperties->value("ip").toString()+" -u "+chkproperties->value("user").toString()+" -p "+chkproperties->value("pass").toString()+" "+chkproperties->value("pathmo").toString()+chkproperties->value("existfile").toString()+" "+arg[3]+" "+arg[4]+" "+arg[5]+" "+arg[1]+"\n";
     writeText(cmd, msg_info);
     proSalida->setObjectName(arg[0]);
     proSalida->write(cmd.toLatin1());
@@ -658,7 +664,7 @@ void MainWindow::on_actionGet_triggered()
 
 void MainWindow::on_actionTest_triggered()
 {
-    player->setVolume(50);
+    player->setVolume(cvolume);
     player->play();
 
 }
