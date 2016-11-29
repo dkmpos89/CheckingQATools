@@ -30,6 +30,10 @@ MainWindow::MainWindow(QWidget *parent) :
     QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
     ui->webView->load(QUrl("http://checking:8080/checking/dashboard/view.run?category=projects"));
 
+    /* Connect para el cambio de proyecto y atributo automatico */
+    connect(ui->project_id_baseline, SIGNAL(currentIndexChanged(int)), ui->area_id_baseline, SLOT(setCurrentIndex(int)));
+    connect(ui->project_id_requests, SIGNAL(currentIndexChanged(int)), ui->area_id_requests, SLOT(setCurrentIndex(int)));
+
 }
 
 MainWindow::~MainWindow()
@@ -201,7 +205,7 @@ void MainWindow::on_actionStart_triggered()
         procPaExec = initProcess();
 
         /* BLoque de carga de proyecto de checking */
-        if(idx==0) key = ui->area_id_requests->currentText();
+        if(idx==2) key = ui->area_id_requests->currentText();
         else if(idx==1) key = ui->area_id_baseline->currentText();
 
         settings->beginGroup("projectchk");
@@ -214,7 +218,7 @@ void MainWindow::on_actionStart_triggered()
                 lista = ( QStringList()<<"1"<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text().trimmed()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text().trimmed() );
                 cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
             }else if(idx==2){
-                lista = ( QStringList()<<"0"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text().trimmed()<<ui->area_id_requests->currentText() );
+                lista = ( QStringList()<<"2"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text().trimmed()<<ui->area_id_requests->currentText() );
                 cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
             }
         }else{
@@ -443,9 +447,9 @@ void MainWindow::activarBotones(int idx, bool b)
 {
     switch(idx)
     {
-        case 0: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
+        case 0: break;
         case 1: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
-        case 2: break;
+        case 2: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
         case 3: break;
         default: break;
     }
@@ -457,13 +461,13 @@ void MainWindow::setConfigProgressBar(QProgressBar *pg, bool bp, int min, int ma
 
     switch(ui->tabWidget->currentIndex())
     {
-        case 0: ui->label_anal_requests->setVisible(bp);
-                ui->label_nombre_requests->setText(ui->requests_id->text().trimmed());
-                ui->label_nombre_requests->setVisible(bp);
-                break;
         case 1: ui->label_anal_baseline->setVisible(bp);
                 ui->label_nombre_baseline->setText(ui->baseline_name->text().trimmed());
                 ui->label_nombre_baseline->setVisible(bp);
+                break;
+        case 2: ui->label_anal_requests->setVisible(bp);
+                ui->label_nombre_requests->setText(ui->requests_id->text().trimmed());
+                ui->label_nombre_requests->setVisible(bp);
                 break;
         default: ui->statusBar->showMessage("Error pestaña no configurada.. ", 1000); break;
     }
@@ -481,8 +485,8 @@ bool MainWindow::validarCampos(int idx)
 
     switch(idx)
     {
-        case 0: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text().trimmed(); break;
         case 1: area = ui->area_id_baseline->currentText(); current_proj = ui->project_id_baseline->currentText(); imputData = ui->baseline_name->text().trimmed(); break;
+        case 2: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text().trimmed(); break;
         default: QMessageBox::warning(this,"CHKTools : ERROR!", "Imposible realizar el paso de validación!" ); return false; break;
     }
 
@@ -575,12 +579,8 @@ void MainWindow::CursorCarga(bool b, int idx)
     switch(idx)
     {
         case 1: setConfigProgressBar(ui->progressBar_tab2, b, 0, 0);
-                ui->label_anal_baseline->setVisible(b);
-                ui->label_nombre_baseline->setVisible(b);
                 break;
         case 2: setConfigProgressBar(ui->progressBar_tab1, b, 0, 0);
-                ui->label_anal_requests->setVisible(b);
-                ui->label_nombre_requests->setVisible(b);
                 break;
         default: break;
     }
