@@ -41,6 +41,7 @@ public:
     void CursorCarga(bool b, int idx);
     void checkearSalida(QStringList arg);
     void mkdirTemp(bool f, QString dir);
+    bool buscarLB(QString lbase, QString *tmpA, QSettings *config);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -60,8 +61,9 @@ private slots:
     void on_actionCMD_triggered();
     void on_actionGet_triggered();
     void on_actionTest_triggered();
-
     void on_actionProxy_Settings_triggered();
+    void on_btnFormato_clicked();
+    void on_btnIniciarAct_clicked();
 
 private:
     Ui::MainWindow *ui;

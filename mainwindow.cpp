@@ -61,10 +61,13 @@ void MainWindow::loadSettings()
     if(!QDir(path).exists()){
         QDir().mkdir(path);
         QFile::copy(":/config/checking_tools_settings.ini", path+"/checking_tools_settings.ini");
+        QFile::copy(":/config/lb_tools_settings.ini", path+"/lb_tools_settings.ini");
+
         QFile::copy(":/config/tfuncional_config.ini", path+"/tfuncional_config.ini");
         QFile::copy(":/config/checking_properties.ini", path+"/checking_properties.ini");
 
         QFile::setPermissions(path+"/checking_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+        QFile::setPermissions(path+"/lb_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
         QFile::setPermissions(path+"/tfuncional_config.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
         QFile::setPermissions(path+"/checking_properties.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     }
@@ -110,6 +113,33 @@ void MainWindow::loadSettings()
 
     /* Crear el sub-directorio de reportes */
     mkdirTemp(true, "reportes");
+
+    /* Se intenta cargar el historial de analisis de Baselines desde el archivo /config/b-historial.txt */
+    QString basename = path+"/b-historial.txt";
+    if(QFile::exists(basename)){
+        ui->tablaResultadoBaselines->setRowCount(ui->tablaResultadoBaselines->rowCount()+1);
+        int nrows = ui->tablaResultadoBaselines->rowCount()-1;
+
+        QFile file(basename);
+
+        if (!file.open(QIODevice::ReadOnly))
+            qInfo()<<"ERROR: No se pudo cargar el historial de analisis de baselines.";
+        else{
+            QTextStream streamMO(&file);
+
+            while(!streamMO.atEnd())
+            {
+                QString in = streamMO.readLine();
+                QStringList lista = in.split(";");
+                ui->tablaResultadoBaselines->setItem(nrows,0,new QTableWidgetItem(lista[0]));
+                ui->tablaResultadoBaselines->setItem(nrows,1,new QTableWidgetItem(lista[1]));
+                ui->tablaResultadoBaselines->setItem(nrows,2,new QTableWidgetItem(lista[2]));
+
+                nrows++;
+                //QDate::currentDate().toString()
+            }
+        }
+    }
 }
 
 void MainWindow::init()
@@ -147,8 +177,8 @@ void MainWindow::init()
 /* End */
 
 /* Bloque de 'connect' para el cambio de Script AIM */
-    connect(ui->noAIM_requests, &QCheckBox::toggled, [=] (const bool cheked) { if(cheked) ui->name_script_requests->setText("x_certificacion_request.bat"); else ui->name_script_requests->setText("certificacion_request.bat");  });
-    connect(ui->noAIM_baseline, &QCheckBox::toggled, [=] (const bool cheked) { if(cheked) ui->name_script_baseline->setText("x_certificacion_RDC.bat"); else ui->name_script_baseline->setText("certificacion_RDC.bat");  });
+    connect(ui->noAIM_requests, &QCheckBox::toggled, [=] (const bool cheked) { if(cheked) ui->name_script_requests->setText("x_certificacion_request_NOAIM.bat"); else ui->name_script_requests->setText("certificacion_request.bat");  });
+    connect(ui->noAIM_baseline, &QCheckBox::toggled, [=] (const bool cheked) { if(cheked) ui->name_script_baseline->setText("x_certificacion_RDC_NOAIM.bat"); else ui->name_script_baseline->setText("certificacion_RDC.bat");  });
 /* End */
 
 /* Bloque de creaciones del binario ../bin/paexec.exe */
@@ -166,6 +196,11 @@ void MainWindow::init()
     ui->historialTWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->historialTWidget->horizontalHeader()->setResizeContentsPrecision(QHeaderView::Stretch);
 /* End */
+
+/* Bloque de carga de la tabla Historial de baselines */
+    //
+/* End */
+
 }
 
 QProcess* MainWindow::initProcess()
@@ -334,6 +369,41 @@ void MainWindow::on_actionCMD_triggered()
 //        if(procPaExec->state()==QProcess::Running)
 //            procPaExec->write(text.toLatin1()+"\n");
 //    }
+}
+
+void MainWindow::on_btnFormato_clicked()
+{
+    ui->statusBar->showMessage("Aplicando el formato a las lineas de entrada....", 2000);
+    QString m_SFile = QDir::currentPath()+"/config/lb_tools_settings.ini";
+    QSettings *config = new QSettings(m_SFile, QSettings::IniFormat);
+    QString txsalida = "";
+
+    config->beginGroup("project");
+
+    QString textIn = ui->inputPane->toPlainText();
+    QStringList listIn;
+    if(!textIn.isEmpty()){
+        listIn<<textIn.split("\n");
+        foreach (QString lbase, listIn) {
+            if(!lbase.contains(";")){
+                if(lbase.isEmpty()){}
+                else{
+                    QString tmpAtrib;
+                    if(buscarLB(lbase, &tmpAtrib, config))
+                        txsalida.append(lbase+";"+tmpAtrib+"\n");
+                    else
+                        txsalida.append(lbase+";----------\n");
+                }
+            }else{
+                txsalida.append(lbase+"\n");
+            }
+        }
+    }else{
+        ui->statusBar->showMessage("Lista vacia!", 2000);
+    }
+    ui->inputPane->clear();
+    ui->inputPane->appendPlainText(txsalida);
+    config->endGroup();
 }
 /* Fin Menus y Botones */
 
@@ -641,6 +711,19 @@ void MainWindow::mkdirTemp(bool f, QString dir)
         writeText("^ [NO]", msg_info);
     }
 }
+
+bool MainWindow::buscarLB(QString lbase, QString *tmpA, QSettings *config)
+{
+    QStringList projects = config->childKeys();
+    foreach (QString cproj, projects) {
+        if(lbase.contains(cproj)){
+            *tmpA = config->value(cproj).toString();
+            return true;
+        }
+    }
+    return false;
+}
+
 /* Fin funciones de control */
 
 
@@ -684,3 +767,18 @@ void MainWindow::on_actionProxy_Settings_triggered()
 /* Fin de la zona de pruebas */
 
 
+
+
+
+
+void MainWindow::on_btnIniciarAct_clicked()
+{
+    QProcess *procPaExec;
+    QString cmd = "";
+    cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -w D:\\dimensions\\pendiente\\ -s cmd.exe\n";
+    procPaExec = initProcess();
+    procPaExec->write(cmd.toLatin1());
+    procPaExec->waitForStarted(3000);
+    procPaExec->write("DIR /B\n");
+
+}

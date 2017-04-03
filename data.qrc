@@ -17,5 +17,7 @@
         <file>config/checking_properties.ini</file>
         <file>sounds/eco_de_campanas.mp3</file>
         <file>images/sound.png</file>
+        <file>images/jformato.png</file>
+        <file>config/lb_tools_settings.ini</file>
     </qresource>
 </RCC>
