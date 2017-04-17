@@ -9,6 +9,7 @@
 #include <QNetworkReply>
 #include <QNetworkProxy>
 #include <QProgressBar>
+#include <QPlainTextEdit>
 #include <QProcess>
 #include <QUrl>
 #include <QDir>
@@ -42,6 +43,7 @@ public:
     void checkearSalida(QStringList arg);
     void mkdirTemp(bool f, QString dir);
     bool buscarLB(QString lbase, QString *tmpA, QSettings *config);
+    void getExtensiones(QStringList lex);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -51,6 +53,8 @@ public slots:
     void downloadFinished(QNetworkReply *reply);
     void readDotout();
     void mostrarSalidaDM(bool b, QString s);
+    void MsgBlOut(QString msg, QPlainTextEdit *QP);
+    void CheckoutDIM();
 private slots:
     void on_actionStart_triggered();
     void on_btnSetear_clicked();
@@ -74,6 +78,8 @@ private:
     QList<QProcess*> listadeProcesos;
     QMediaPlayer *player;
     int cvolume = 50;
+
+    QString output_baseline_dm;
 
     const QString UPDATER = QString("cmd");
     const QStringList ARGUMENTS = ( QStringList()<<"" );

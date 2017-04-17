@@ -205,7 +205,10 @@ void MainWindow::init()
 
 QProcess* MainWindow::initProcess()
 {
+    QThread* thread = new QThread(this);
     QProcess *proceso = new QProcess(this);
+    proceso->moveToThread(thread);
+
     proceso->setProcessChannelMode( QProcess::SeparateChannels );
     proceso->start(UPDATER, ARGUMENTS, QProcess::ReadWrite);
     proceso->waitForStarted(5000);
@@ -213,13 +216,14 @@ QProcess* MainWindow::initProcess()
     QString cmd("cd "+WORKING_DIR+"\n");
     proceso->write(cmd.toLatin1());
     proceso->waitForFinished(1000);
-    QByteArray ba = proceso->readAll();//clean stdout
-    Q_UNUSED(ba);
 
     connect(proceso, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
     connect(proceso, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
 
     writeText("Nuevo proceso creado. ID: "+QString::number(proceso->processId()), msg_notify);
+
+    QByteArray ba = proceso->readAll();//clean stdout
+    Q_UNUSED(ba);
 
     listadeProcesos.append(proceso);
     return proceso;
@@ -230,13 +234,41 @@ QProcess* MainWindow::initProcess()
 /* Funciones de los Menus y Botones */
 void MainWindow::on_actionStart_triggered()
 {
-    QProcess *procPaExec;
+    QProcess *procPaExec, *prcGroovy;
     QString cmd = "";
     QString key = "";
     QStringList lista;
     int idx = ui->tabWidget->currentIndex();
 
+    QString script_id = ui->name_script_baseline->text();
+    QString product_id = ui->product_id_baseline->currentText();
+    QString project_id = ui->project_id_baseline->currentText();
+    QString baseline_name = ui->baseline_name->text().trimmed();
+    QString area_id = ui->area_id_baseline->currentText();
+
+
+    /* [1] - Si se cumple con los requisitos se creará un proceso que se ejecuta en el servidor de chk-qa */
     if(validarCampos(idx)){
+
+        /* [2] - Si está instalado groovy ejecuta una llamada a la api de dimensions par sacar las extensiones de los archivos */
+            prcGroovy = initProcess();
+            if ((prcGroovy->state()==QProcess::Running))
+            {
+                ui->baseline_output->clear();
+                QString commd = "groovy checkoutBaseline.groovy "+product_id+" "+project_id+" "+baseline_name+" "+area_id+"\n";
+                disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+
+                prcGroovy->write(commd.toLatin1());
+                prcGroovy->waitForFinished(1000);
+                QByteArray ba = prcGroovy->readAll();//clean stdout
+                Q_UNUSED(ba);
+
+                connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+
+            }else
+                MsgBlOut("groovy is not ready, :( \n", ui->baseline_output);
+        /* [2] END */
+
         procPaExec = initProcess();
 
         /* BLoque de carga de proyecto de checking */
@@ -250,7 +282,7 @@ void MainWindow::on_actionStart_triggered()
 
         if(procPaExec->state()==QProcess::Running){
             if(idx==1){
-                lista = ( QStringList()<<"1"<<projecNameCHK<<ui->name_script_baseline->text()<<ui->product_id_baseline->currentText()<<ui->project_id_baseline->currentText()<<ui->baseline_name->text().trimmed()<<ui->area_id_baseline->currentText()<<ui->baseline_name->text().trimmed() );
+                lista = ( QStringList()<<"1"<<projecNameCHK<<script_id<<product_id<<project_id<<baseline_name<<area_id<<baseline_name );
                 cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
             }else if(idx==2){
                 lista = ( QStringList()<<"2"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text().trimmed()<<ui->area_id_requests->currentText() );
@@ -263,6 +295,7 @@ void MainWindow::on_actionStart_triggered()
     }else{
         return;
     }
+    /* [1] END */
 
     procPaExec->write(cmd.toLatin1());
     bloquarPanel(true,idx);
@@ -724,7 +757,47 @@ bool MainWindow::buscarLB(QString lbase, QString *tmpA, QSettings *config)
     return false;
 }
 
-/* Fin funciones de control */
+void MainWindow::MsgBlOut(QString msg, QPlainTextEdit *QP)
+{
+    QP->insertPlainText(msg);
+}
+
+void MainWindow::CheckoutDIM()
+{
+    QStringList lista_lineas;
+    QObject *sender = QObject::sender();
+    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
+    QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
+
+    MsgBlOut(buff, ui->baseline_output);
+    output_baseline_dm.append(buff);
+
+    if(buff.contains("PROCESO-TERMINADO-SUCCESS"))
+    {
+        lista_lineas = output_baseline_dm.split("\n");
+        getExtensiones(lista_lineas.mid(lista_lineas.lastIndexOf("[INICIO]")));
+        lista_lineas.pop_front();
+        lista_lineas.pop_back();
+
+        disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+        return;
+
+    }else if(buff.contains("PROCESO-TERMINADO-FAIL")){
+        MsgBlOut("[ERROR] No se pueden descargar los componentes desde Dimensions.", ui->baseline_output);
+        disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+        return;
+    }
+}
+
+void MainWindow::getExtensiones(QStringList lex)
+{
+    for(QString file : lex)
+    {
+       QString ext = file.mid(file.lastIndexOf("."));
+       qInfo() << ext << endl;
+    }
+}
+///* Fin funciones de control */
 
 
 

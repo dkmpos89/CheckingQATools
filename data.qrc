@@ -19,5 +19,10 @@
         <file>images/sound.png</file>
         <file>images/jformato.png</file>
         <file>config/lb_tools_settings.ini</file>
+        <file>bin/alsUtils.jar</file>
+        <file>bin/checkoutBaseline.groovy</file>
+        <file>bin/dmclient.jar</file>
+        <file>bin/log4j.properties</file>
+        <file>bin/plugin-custom.properties</file>
     </qresource>
 </RCC>
