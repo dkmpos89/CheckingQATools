@@ -16,9 +16,13 @@ import org.apache.log4j.PropertyConfigurator;
 public class checkoutBaseline {
 
 	//private static Logger log = Logger.getLogger(checkoutBaseline.class);
-	private static String product = "COREBANCO";  						// Producto a analizar
-	private static String project = "INTEGRACION_DE_SERVICIOS";  		// Proyecto a analizar 
-	private static String br_object = "LB_INI_B060A_20170404"; 			// linea base o request
+	private static String product = "";  						// Producto a analizar
+	private static String project = "";  						// Proyecto a analizar 
+	private static String br_object = ""; 						// linea base o request
+	private static String atrib = ""; 							// Atributo proyecto
+
+	private static String myItemslist = ""; 
+
 	private static String username = "dmsys";
 	private static String password = "BcoRipley12";
 	private static String dbname = "dimensions_adm";
@@ -31,29 +35,41 @@ public class checkoutBaseline {
 	static void show(String message){
 		System.out.println(message);
 	}
+	static void failed(String message){
+		System.out.println(message);
+		show("\nPROCESO-TERMINADO-FAIL");
+		throw new Exception(message);
+	}
 	
 	public static void main(String[] args) throws IOException 
 	{
 		String executionPath = System.getProperty("user.dir");
 		//PropertyConfigurator.configure(executionPath+"/log4j.properties");
-		
-		show("Iniciando la descarga de items de Dimensions asociados a un baseline");
+		product = args[0];
+		project = args[1];
+		br_object = args[2];
+		atrib = args[3];
 
-		// Validando acceso a properties con datos de conexión
-		File customPropertiesFile = new File(executionPath+"/plugin-custom.properties");
-		if (!customPropertiesFile.exists()) 
-			show("No se puede cargar fichero plugin-custom.properties con las propiedades de conexion de Dimensions");
-		else
-			show("Fichero plugin-custom.properties cargado exitosamente!");
+		show("INICIANDO LA DESCARGA...");
+		show("---> Producto: "+product);
+		show("---> Proyecto: "+project);
+		show("---> Objeto: "+br_object);
+
+		// Validando acceso a properties con datos de conexiÃ³n
+		//File customPropertiesFile = new File(executionPath+"/plugin-custom.properties");
+		//if (!customPropertiesFile.exists()) 
+			//show("No se puede cargar fichero plugin-custom.properties con las propiedades de conexion de Dimensions");
+		//else
+			//show("Fichero plugin-custom.properties cargado exitosamente!");
 		
 		//InputStream fileStream = new FileInputStream(customPropertiesFile);
 		//customPropertiesFile.load(fileStream);
 		//Properties customProperties = IOUtils.loadProperties(fileStream);
 
-		if (project == null) 
-			show("No existe project seleccionado. Por favor, especificar un proyecto para la descarga de items asociados al baseline");
-		else
-			show("Proyecto: "+project+" cargado exitosamente!");
+		//if (project == null) 
+			//show("No existe project seleccionado. Por favor, especificar un proyecto para la descarga de items asociados al baseline");
+		//else
+			//show("Proyecto: "+project+" cargado exitosamente!");
 		
 		try {
 			// obteniendo la conexion con Dimensions
@@ -64,13 +80,14 @@ public class checkoutBaseline {
 			details.setDbName(dbname);
 			details.setDbConn(dbconn);
 			details.setServer(ip);
-			show("Se va a proceder a conectar con Dimensions con los siguientes parametros: " + username + ", " + password + ", " + dbname + ", " + ip);
+			show("Conectando con Dimensions...");
  
 			connection = DimensionsConnectionManager.getConnection(details);		
 			if(connection!=null) 
-				show("Conexion exitosa con Dimensions.");
-			else
-				show("No se puede conectar con Dimensions.");
+				show("---> Conexion exitosa");
+			else{
+				failed("[ No se puede conectar con Dimensions ]");
+			}
 			  
 			//filtro para identificar el baseline objetivo de la descarga
 			Filter filter = new Filter();
@@ -79,32 +96,51 @@ public class checkoutBaseline {
 			  
 			//solo deberia devolver un baseline 
 			if (baselines.size() == 0) 
-				show("Linea base no encontrada: "+baselines.size());
-			else if(baselines.size() == 1){
-				show("Baseline encontrado: "+baselines.size());
+				failed("[ Baseline: "+br_object+" no encontrada - "+baselines.size()+" ]");
+			else if(baselines.size() == 1)
+			{
+				show("---> Baseline encontrados: "+baselines.size());
 			}else
-				show("Mas de un baseline no permitido a la vez");
+				failed("[ Mas de un baseline no permitido a la vez ]");
 
 			filter = new Filter();
 			filter.criteria().add(new Filter.Criterion(SystemAttributes.IS_LATEST_REV));
 			List<DimensionsRelatedObject> listItemRelationships = baselines.get(0).getChildItems(filter);
 			  
-			show("Tamaño de lista de items: "+listItemRelationships.size());
-			  
-			System.out.println("\nLista de items: ");
-			for (DimensionsRelatedObject item : listItemRelationships) 
-			{
-				ItemRevision itemLastRevision  = (ItemRevision) item.getObject();
-				int[] queryAttributes = [ SystemAttributes.OBJECT_UID, SystemAttributes.STATUS, SystemAttributes.ITEMFILE_DIR, SystemAttributes.ITEMFILE_FILENAME ];
-				itemLastRevision.queryAttribute(queryAttributes);
-				List attributes = itemLastRevision.getAttribute(queryAttributes);
-				System.out.println(attributes.get(3).toString());
-				
-			}	  
+			show("---> Items encontrados: "+listItemRelationships.size());
+			if(listItemRelationships.size() >0 ){
+
+				System.out.println("[INICIO]");
+				for (DimensionsRelatedObject item : listItemRelationships) 
+				{
+					ItemRevision itemLastRevision  = (ItemRevision) item.getObject();
+					int[] queryAttributes = [ SystemAttributes.OBJECT_UID, SystemAttributes.STATUS, SystemAttributes.ITEMFILE_DIR, SystemAttributes.ITEMFILE_FILENAME ];
+					itemLastRevision.queryAttribute(queryAttributes);
+					List attributes = itemLastRevision.getAttribute(queryAttributes);
+					System.out.println(attributes.get(3).toString());
+					//myItemslist = myItemslist+attributes.get(3).toString()+";";
+				}
+/*				def cmd = 'cmd /c setx LIST_OF_ITEMS /M '+myItemslist;
+				//println(cmd)
+				def out = new StringBuffer()
+				def err = new StringBuffer()
+				def proc = cmd.execute()
+				proc.consumeProcessOutput(out,err)
+				proc.waitForOrKill(60000)
+
+				if(proc.exitValue() != 0)
+					failed("Error de ejecucion en proceso 'setx'")
+				else
+					println err.size()==0 ? "OK" : "OK, pero con errores de ejecucion!"
+*/
+				System.out.println("[FIN]");
+				show("PROCESO-TERMINADO-SUCCESS");
+			}else
+				failed("[ ERROR - Linea Base vacia ]");
 		}
-		finally {  
-		  // desconexion Dimensions			
-		  if (connection != null) connection.close();
+		finally {
+			// desconexion Dimensions			
+			if (connection != null) connection.close();
 		}
 	}
 }
