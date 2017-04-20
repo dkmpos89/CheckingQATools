@@ -6,12 +6,11 @@
 #include <QDebug>
 #include <QDesktopWidget>
 #include <QThread>
-#include <QTimer>
 #include <QFileDialog>
-#include <QInputDialog>
 #include <QMessageBox>
 #include <QLoggingCategory>
-
+#include <QMap>
+#include <QMapIterator>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -28,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent) :
     init();
 
     QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
-    ui->webView->load(QUrl("http://checking:8080/checking/dashboard/view.run?category=projects"));
+    ui->webView_1->load(QUrl("http://checking:8080/checking/dashboard/view.run?category=projects"));
 
     /* Connect para el cambio de proyecto y atributo automatico */
     connect(ui->project_id_baseline, SIGNAL(currentIndexChanged(int)), ui->area_id_baseline, SLOT(setCurrentIndex(int)));
@@ -205,9 +204,9 @@ void MainWindow::init()
 
 QProcess* MainWindow::initProcess()
 {
-    QThread* thread = new QThread(this);
+    //QThread* thread = new QThread(this);
     QProcess *proceso = new QProcess(this);
-    proceso->moveToThread(thread);
+    //proceso->moveToThread(thread);
 
     proceso->setProcessChannelMode( QProcess::SeparateChannels );
     proceso->start(UPDATER, ARGUMENTS, QProcess::ReadWrite);
@@ -240,12 +239,23 @@ void MainWindow::on_actionStart_triggered()
     QStringList lista;
     int idx = ui->tabWidget->currentIndex();
 
-    QString script_id = ui->name_script_baseline->text();
-    QString product_id = ui->product_id_baseline->currentText();
-    QString project_id = ui->project_id_baseline->currentText();
-    QString baseline_name = ui->baseline_name->text().trimmed();
-    QString area_id = ui->area_id_baseline->currentText();
-
+    /* BLoque de carga de proyecto de checking */
+    if(idx==2) {
+        key = ui->area_id_requests->currentText();
+        script_id = ui->name_script_requests->text();
+        product_id = ui->product_id_requests->currentText();
+        project_id = ui->project_id_requests->currentText();
+        object_id = ui->requests_id->text().trimmed();
+        area_id = ui->area_id_requests->currentText();
+    }
+    else if(idx==1){
+        key = ui->area_id_baseline->currentText();
+        script_id = ui->name_script_baseline->text();
+        product_id = ui->product_id_baseline->currentText();
+        project_id = ui->project_id_baseline->currentText();
+        object_id = ui->baseline_name->text().trimmed();
+        area_id = ui->area_id_baseline->currentText();
+    }
 
     /* [1] - Si se cumple con los requisitos se creará un proceso que se ejecuta en el servidor de chk-qa */
     if(validarCampos(idx)){
@@ -255,7 +265,7 @@ void MainWindow::on_actionStart_triggered()
             if ((prcGroovy->state()==QProcess::Running))
             {
                 ui->baseline_output->clear();
-                QString commd = "groovy checkoutBaseline.groovy "+product_id+" "+project_id+" "+baseline_name+" "+area_id+"\n";
+                QString commd = "groovy checkoutBaseline.groovy "+product_id+" "+project_id+" "+object_id+" "+area_id+"\n";
                 disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
 
                 prcGroovy->write(commd.toLatin1());
@@ -270,11 +280,6 @@ void MainWindow::on_actionStart_triggered()
         /* [2] END */
 
         procPaExec = initProcess();
-
-        /* BLoque de carga de proyecto de checking */
-        if(idx==2) key = ui->area_id_requests->currentText();
-        else if(idx==1) key = ui->area_id_baseline->currentText();
-
         settings->beginGroup("projectchk");
         QString projecNameCHK = settings->value(key).toString();
         settings->endGroup();
@@ -282,7 +287,7 @@ void MainWindow::on_actionStart_triggered()
 
         if(procPaExec->state()==QProcess::Running){
             if(idx==1){
-                lista = ( QStringList()<<"1"<<projecNameCHK<<script_id<<product_id<<project_id<<baseline_name<<area_id<<baseline_name );
+                lista = ( QStringList()<<"1"<<projecNameCHK<<script_id<<product_id<<project_id<<object_id<<area_id<<object_id );
                 cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
             }else if(idx==2){
                 lista = ( QStringList()<<"2"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text().trimmed()<<ui->area_id_requests->currentText() );
@@ -297,10 +302,10 @@ void MainWindow::on_actionStart_triggered()
     }
     /* [1] END */
 
-    procPaExec->write(cmd.toLatin1());
-    bloquarPanel(true,idx);
-    CursorCarga(true, idx);
-    checkearSalida(lista);
+//    procPaExec->write(cmd.toLatin1());
+//    bloquarPanel(true,idx);
+//    CursorCarga(true, idx);
+//    checkearSalida(lista);
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -393,15 +398,7 @@ void MainWindow::on_actionEliminar_Duplicados_triggered()
 
 void MainWindow::on_actionCMD_triggered()
 {
-//    bool ok;
-//    // Ask for birth date as a string.
-//    QString text = QInputDialog::getText(0, "Linea de comandos_",
-//                                         "Ingrese:", QLineEdit::Normal,
-//                                         "", &ok);
-//    if (ok && !text.isEmpty()) {
-//        if(procPaExec->state()==QProcess::Running)
-//            procPaExec->write(text.toLatin1()+"\n");
-//    }
+    //
 }
 
 void MainWindow::on_btnFormato_clicked()
@@ -764,6 +761,8 @@ void MainWindow::MsgBlOut(QString msg, QPlainTextEdit *QP)
 
 void MainWindow::CheckoutDIM()
 {
+    int ini = 0;
+    int fin = -1;
     QStringList lista_lineas;
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
@@ -774,10 +773,16 @@ void MainWindow::CheckoutDIM()
 
     if(buff.contains("PROCESO-TERMINADO-SUCCESS"))
     {
+        output_baseline_dm.replace("\r\n", "\n");
         lista_lineas = output_baseline_dm.split("\n");
-        getExtensiones(lista_lineas.mid(lista_lineas.lastIndexOf("[INICIO]")));
-        lista_lineas.pop_front();
-        lista_lineas.pop_back();
+
+        /* Desde [INICIO] hasta [FIN] estan los nombres de los items de la linea base */
+        ini = lista_lineas.lastIndexOf("[INICIO]");
+        fin = lista_lineas.lastIndexOf("[FIN]");
+        int tam = fin - ini;
+
+        /* Se calcula la sub lista de los nombres de los items y se obtiene sus extensiones */
+        getExtensiones(lista_lineas.mid(ini, tam));
 
         disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
         return;
@@ -789,13 +794,83 @@ void MainWindow::CheckoutDIM()
     }
 }
 
-void MainWindow::getExtensiones(QStringList lex)
+void MainWindow::getExtensiones(QStringList lt)
 {
-    for(QString file : lex)
+    lt.pop_front(); // quitamos la etiqueta [INICIO] al principio del QStringList
+    QMap<QString, QString> mapURLs;
+
+    //[projectchk]
+    settings->beginGroup("projectchk");
+    QString projecNameCHK = settings->value(area_id).toString();
+    settings->endGroup();
+
+    for(QString it : lt)
     {
-       QString ext = file.mid(file.lastIndexOf("."));
-       qInfo() << ext << endl;
+        QString ext = it.mid(it.lastIndexOf("."));
+
+        if(LIST_PLSQL.contains(ext)) mapURLs.insert("plsql", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportplsql.html");
+        if(LIST_JAVA.contains(ext)) mapURLs.insert("java", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportjava.html");
+        if(LIST_ACTIONSCRIPT.contains(ext)) mapURLs.insert("actionscript", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportactionscript.html");
+        if(LIST_COBOL.contains(ext)) mapURLs.insert("cobol", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportcobol.html");
+        if(LIST_ASP.contains(ext)) mapURLs.insert("asp", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportasp.html");
+        if(LIST_JSP.contains(ext)) mapURLs.insert("jsp", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportjsp.html");
+        if(LIST_JAVASCRIPT.contains(ext)) mapURLs.insert("javascript", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportjavascript.html");
+
     }
+
+    QMapIterator<QString, QString> i(mapURLs);
+    while (i.hasNext()) {
+        i.next();
+        switch( i.key() )
+        {
+        case plsql:
+            ui->tabWebReport->setTabEnabled(0, true);
+            ui->tabWebReport->setTabText(0, "Report PLSQL");
+            ui->webView_1->load(QUrl(i.value()));
+            break;
+
+        case "java":
+            ui->tabWebReport->setTabEnabled(1, true);
+            ui->tabWebReport->setTabText(1, "Report JAVA");
+            ui->webView_2->load(QUrl(i.value()));
+            break;
+
+        case "actionscript":
+            ui->tabWebReport->setTabEnabled(2, true);
+            ui->tabWebReport->setTabText(2, "Report ActioScript");
+            ui->webView_3->load(QUrl(i.value()));
+            break;
+
+        case "cobol":
+            ui->tabWebReport->setTabEnabled(3, true);
+            ui->tabWebReport->setTabText(3, "Report COBOL");
+            ui->webView_2->load(QUrl(i.value()));
+            break;
+
+        case "asp":
+            ui->tabWebReport->setTabEnabled(4, true);
+            ui->tabWebReport->setTabText(4, "Report ASP");
+            ui->webView_3->load(QUrl(i.value()));
+            break;
+
+        case "jsp":
+            ui->tabWebReport->setTabEnabled(5, true);
+            ui->tabWebReport->setTabText(5, "Report JSP");
+            ui->webView_1->load(QUrl(i.value()));
+            break;
+
+        case "javascript":
+            ui->tabWebReport->setTabEnabled(6, true);
+            ui->tabWebReport->setTabText(6, "Report Javascript");
+            ui->webView_2->load(QUrl(i.value()));
+            break;
+        default:
+            break;
+        }
+
+    }
+
+
 }
 ///* Fin funciones de control */
 
@@ -853,5 +928,21 @@ void MainWindow::on_btnIniciarAct_clicked()
     procPaExec->write(cmd.toLatin1());
     procPaExec->waitForStarted(3000);
     procPaExec->write("DIR /B\n");
+
+}
+
+void MainWindow::on_actionDoTest_triggered()
+{
+    ui->baseline_name->setText("FISA_NOCOBROFUNC_20170418_OBJ");
+    ui->project_id_baseline->setCurrentIndex(13);
+    ui->area_id_baseline->setCurrentIndex(13);
+    ui->noAIM_baseline->setChecked(true);
+
+    //on_actionStart_triggered();
+
+//    QByteArray listOFitems = qgetenv("LIST_OF_ITEMS");
+//    QString StringItems(listOFitems);
+//    qInfo()<< "getENV: "+StringItems<<endl;
+//    qInfo()<< "Process-ENV: "+QProcessEnvironment::systemEnvironment().value("LIST_OF_ITEMS") <<endl;
 
 }

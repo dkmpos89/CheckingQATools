@@ -68,23 +68,111 @@ QWidget#contenedorTab2 {
        </font>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
       </property>
       <widget class="QWidget" name="tab_Home">
        <attribute name="title">
-        <string>Home</string>
+        <string>Home - Reportes</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_12">
         <item row="0" column="0">
-         <widget class="QWebView" name="webView">
-          <property name="url">
-           <url>
-            <string>about:blank</string>
-           </url>
+         <widget class="QTabWidget" name="tabWebReport">
+          <property name="currentIndex">
+           <number>0</number>
           </property>
+          <widget class="QWidget" name="tab_6">
+           <attribute name="title">
+            <string>Page 1</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_11">
+            <item row="1" column="0">
+             <widget class="QWebView" name="webView_1">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="url">
+               <url>
+                <string>about:blank</string>
+               </url>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLineEdit" name="URL_webView_1">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_7">
+           <attribute name="title">
+            <string>Page 2</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_13">
+            <item row="0" column="0">
+             <widget class="QLineEdit" name="URL_webView_2">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QWebView" name="webView_2">
+              <property name="url">
+               <url>
+                <string>about:blank</string>
+               </url>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_8">
+           <attribute name="title">
+            <string>Page 3</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_14">
+            <item row="0" column="0">
+             <widget class="QLineEdit" name="URL_webView_3"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QWebView" name="webView_3">
+              <property name="url">
+               <url>
+                <string>about:blank</string>
+               </url>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_9">
+           <attribute name="title">
+            <string>Page 4</string>
+           </attribute>
+          </widget>
+          <widget class="QWidget" name="tab_10">
+           <attribute name="title">
+            <string>Page 5</string>
+           </attribute>
+          </widget>
+          <widget class="QWidget" name="tab_11">
+           <attribute name="title">
+            <string>Page 6</string>
+           </attribute>
+          </widget>
+          <widget class="QWidget" name="tab_12">
+           <attribute name="title">
+            <string>Page 7</string>
+           </attribute>
+          </widget>
          </widget>
         </item>
        </layout>
@@ -1451,6 +1539,8 @@ QWidget#contenedorTab2 {
     <addaction name="actionCMD"/>
     <addaction name="actionGet"/>
     <addaction name="actionTest"/>
+    <addaction name="separator"/>
+    <addaction name="actionDoTest"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -1621,6 +1711,15 @@ QWidget#contenedorTab2 {
     <string>Proxy Settings</string>
    </property>
   </action>
+  <action name="actionDoTest">
+   <property name="icon">
+    <iconset resource="data.qrc">
+     <normaloff>:/images/on.png</normaloff>:/images/on.png</iconset>
+   </property>
+   <property name="text">
+    <string>doTest</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -1643,7 +1742,6 @@ QWidget#contenedorTab2 {
  </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
-  <tabstop>webView</tabstop>
   <tabstop>name_script_baseline</tabstop>
   <tabstop>product_id_baseline</tabstop>
   <tabstop>project_id_baseline</tabstop>

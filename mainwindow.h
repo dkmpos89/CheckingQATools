@@ -43,7 +43,7 @@ public:
     void checkearSalida(QStringList arg);
     void mkdirTemp(bool f, QString dir);
     bool buscarLB(QString lbase, QString *tmpA, QSettings *config);
-    void getExtensiones(QStringList lex);
+    void getExtensiones(QStringList lt);
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -69,6 +69,8 @@ private slots:
     void on_btnFormato_clicked();
     void on_btnIniciarAct_clicked();
 
+    void on_actionDoTest_triggered();
+
 private:
     Ui::MainWindow *ui;
     QString m_sSettingsFile;
@@ -84,6 +86,26 @@ private:
     const QString UPDATER = QString("cmd");
     const QStringList ARGUMENTS = ( QStringList()<<"" );
     const QString WORKING_DIR = QDir::currentPath()+"/bin";
+
+    /* Variables del analisis actual */
+    QString script_id ;
+    QString product_id ;
+    QString project_id ;
+    QString object_id ;
+    QString area_id ;
+
+    QString BASE_URL = "http://checking:8080/report/qaking/Dimensions/";
+
+    /* Listas de extensiones que analisa chk-qa */
+    QStringList LIST_PLSQL = ( QStringList()<<".sf"<<".sps"<<".spb"<<".sp"<<".fnc"<<".spp"<<".plsql"<<".trg"<<".sql"<<".st"<<".prc"<<".pks"<<".pkb"<<".pck"<<".vw" );
+    QStringList LIST_ASP = ( QStringList()<<".asp" );
+    QStringList LIST_JSP = ( QStringList()<<".jsp"<<".jspx"<<".xhtml" );
+    QStringList LIST_COBOL = ( QStringList()<<".cob"<<".cbl"<<".cpy"<<".pco" );
+    QStringList LIST_ACTIONSCRIPT = ( QStringList()<<".as" );
+    QStringList LIST_JAVA = ( QStringList()<<".java" );
+    QStringList LIST_JAVASCRIPT = ( QStringList()<<".js" );
+
+    QStringList informes;
 };
 
 #endif // MAINWINDOW_H
