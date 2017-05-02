@@ -257,23 +257,26 @@ void MainWindow::on_actionStart_triggered()
     if(validarCampos(idx)){
 
         /* [2] - Si está instalado groovy ejecuta una llamada a la api de dimensions par sacar las extensiones de los archivos */
-        prcGroovy = initProcess();
-        prcGroovy->setObjectName(QString::number(idx));
-        if ((prcGroovy->state()==QProcess::Running))
-        {
-            output->clear();
-            QString commd = "groovy "+script+" "+product_id+" "+project_id+" "+object_id+" "+area_id+"\n";
-            disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+        if(idx==1){
+            prcGroovy = initProcess();
+            if ((prcGroovy->state()==QProcess::Running))
+            {
+                output->clear();
+                QString commd = "groovy "+script+" "+product_id+" "+project_id+" "+object_id+" "+area_id+"\n";
+                disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
 
-            prcGroovy->write(commd.toLatin1());
-            prcGroovy->waitForFinished(1000);
-            QByteArray ba = prcGroovy->readAll();//clean stdout
-            Q_UNUSED(ba);
+                prcGroovy->write(commd.toLatin1());
+                prcGroovy->waitForFinished(1000);
+                QByteArray ba = prcGroovy->readAll();//clean stdout
+                Q_UNUSED(ba);
 
-            //connect(prcGroovy, &QProcess::readyReadStandardOutput, [=]() { this->CheckoutDIM(idx); } );
-            connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+                connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+
+            }else
+                MsgBlOut("groovy is not ready, :( \n", output);
         }else
-            MsgBlOut("groovy is not ready!\n", output);
+            MsgBlOut("Busqueda de items para los request aun no configurado :( \n", output);
+        /* [2] END */
 
         procPaExec = initProcess();
         settings->beginGroup("projectchk");
@@ -437,63 +440,12 @@ void MainWindow::on_btnReloadBL_clicked()
     QItemSelectionModel *select = ui->tablaResultadoBaselines->selectionModel();
     QModelIndex index = select->currentIndex();
 
-    if(select->hasSelection())
-    {
-        int row = index.row();
-        QString dataURL = index.sibling(row, 2).data().toString();
-        QString dataTipo = index.sibling(row, 1).data().toString();
-
-        QLineEdit *URL = new QLineEdit(ui->tabWebReport);
-        URL->setReadOnly(true);
-        QWebView *report = new QWebView(ui->tabWebReport);
-
-        QWidget *centralWidget = new QWidget();
-        centralWidget->setLayout( new QGridLayout() );
-        centralWidget->layout()->addWidget( URL );
-        centralWidget->layout()->addWidget( report );
-        int reid = ui->tabWebReport->addTab( centralWidget, dataTipo );
-
-        URL->setText(dataURL);
-        report->load(QUrl(dataURL));
-
-        ui->tabWidget->setCurrentIndex(0);
-        ui->tabWebReport->setCurrentIndex(reid);
-
-    }
-    else{
-        QMessageBox::information(this, "Info:",
-                              "Primero debes seleccionar un informe de la tabla.",
-                              QMessageBox::Ok);
-    }
-}
-
-void MainWindow::on_btnReloadR_clicked()
-{
-    QItemSelectionModel *select = ui->tablaResultadoRequest->selectionModel();
-    QModelIndex index = select->currentIndex();
+    int row = index.row();
+    QString url = index.sibling(row, 2).data().toString();
 
     if(select->hasSelection())
     {
-        int row = index.row();
-        QString dataURL = index.sibling(row, 2).data().toString();
-        QString dataTipo = index.sibling(row, 1).data().toString();
-
-        QLineEdit *URL = new QLineEdit(ui->tabWebReport);
-        URL->setReadOnly(true);
-        QWebView *report = new QWebView(ui->tabWebReport);
-
-        QWidget *centralWidget = new QWidget();
-        centralWidget->setLayout( new QGridLayout() );
-        centralWidget->layout()->addWidget( URL );
-        centralWidget->layout()->addWidget( report );
-        int reid = ui->tabWebReport->addTab( centralWidget, dataTipo );
-
-        URL->setText(dataURL);
-        report->load(QUrl(dataURL));
-
-        ui->tabWidget->setCurrentIndex(0);
-        ui->tabWebReport->setCurrentIndex(reid);
-
+        qInfo()<<url<<endl;
     }
     else{
         QMessageBox::information(this, "Info:",
@@ -584,10 +536,8 @@ void MainWindow::bloquarPanel(bool val, int id)
         case 1: ui->contenedorTab2->setEnabled(!val);
                 ui->btnReloadBL->setEnabled(!val);
                 break;
-        case 2: ui->contenedorTab1->setEnabled(!val);
-                ui->btnReloadR->setEnabled(!val);
-                break;
-        default: QMessageBox::critical(this, "___Error General___", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
+        case 2: ui->contenedorTab1->setEnabled(!val); break;
+        default: QMessageBox::critical(this, "Error General__ X", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
 
 }
@@ -613,10 +563,8 @@ void MainWindow::downloadFinished(QNetworkReply *reply)
 
 void MainWindow::sceneTabRemove_slot(int index)
 {
-    if(index>0){
-        ui->tabWebReport->currentWidget()->deleteLater();
-        ui->tabWebReport->removeTab(index);
-    }
+    ui->tabWebReport->currentWidget()->deleteLater();
+    ui->tabWebReport->removeTab(index);
 }
 
 bool MainWindow::saveToHistory(QString filePath, QStringList data)
@@ -649,6 +597,7 @@ bool MainWindow::loadHistoryFile(QString filePath, QTableWidget *tabla)
         while(!in.atEnd()){
             QString line = in.readLine();
             QStringList data = line.split(";");
+            qInfo()<<"data: "<<data.size()<<endl;
             int nrows = tabla->rowCount();
             tabla->setRowCount(tabla->rowCount()+1);
 
@@ -810,7 +759,6 @@ void MainWindow::CursorCarga(bool b, int id)
 
 void MainWindow::checkearSalida(QStringList arg)
 {
-
     ui->statusBar->showMessage("Analizando: "+arg[5]+" por favor espere....", 5000);
     QProcess *proSalida = initProcess();
     disconnect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
@@ -889,21 +837,14 @@ void MainWindow::CheckoutDIM()
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
     QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
-    QPlainTextEdit *currPTEdit;
-    int id = procPaExec->objectName().toInt();
 
-    if(id == 1)
-        currPTEdit = ui->baseline_output;
-    else
-        currPTEdit = ui->request_output;
-
-    MsgBlOut(buff, currPTEdit);
-    output__dm.append(buff);
+    MsgBlOut(buff, ui->baseline_output);
+    output_baseline_dm.append(buff);
 
     if(buff.contains("PROCESO-TERMINADO-SUCCESS"))
     {
-        output__dm.replace("\r\n", "\n");
-        lista_lineas = output__dm.split("\n");
+        output_baseline_dm.replace("\r\n", "\n");
+        lista_lineas = output_baseline_dm.split("\n");
 
         /* Desde [INICIO] hasta [FIN] estan los nombres de los items de la linea base */
         ini = lista_lineas.lastIndexOf("[INICIO]");
@@ -916,7 +857,7 @@ void MainWindow::CheckoutDIM()
         return;
 
     }else if(buff.contains("PROCESO-TERMINADO-FAIL")){
-        MsgBlOut("[ERROR] No se pueden descargar los componentes desde Dimensions.", currPTEdit);
+        MsgBlOut("[ERROR] No se pueden descargar los componentes desde Dimensions.", ui->baseline_output);
         disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
         return;
     }
@@ -981,7 +922,6 @@ void MainWindow::loadWebReport()
         i.next();
 
         QLineEdit *URL = new QLineEdit(ui->tabWebReport);
-        URL->setReadOnly(true);
         QWebView *report = new QWebView(ui->tabWebReport);
 
         QWidget *centralWidget = new QWidget();
@@ -995,7 +935,7 @@ void MainWindow::loadWebReport()
 
     }
 }
-///* Fin funciones de control *///
+///* Fin funciones de control */
 
 
 
@@ -1056,11 +996,16 @@ void MainWindow::on_btnIniciarAct_clicked()
 
 void MainWindow::on_actionDoTest_triggered()
 {
+    if(loadHistoryFile(QDir().currentPath()+"/logBaselines.log", ui->tablaResultadoBaselines))
+        qInfo()<<"Cargado con exito!"<<endl;
+    else
+        qInfo()<<"Error al cargar el historial"<<endl;
 
-    ui->baseline_name->setText("FISA_NOCOBROFUNC_20170418_OBJ");
-    ui->project_id_baseline->setCurrentIndex(13);
-    ui->area_id_baseline->setCurrentIndex(13);
-    ui->noAIM_baseline->setChecked(true);
+
+//    ui->baseline_name->setText("FISA_NOCOBROFUNC_20170418_OBJ");
+//    ui->project_id_baseline->setCurrentIndex(13);
+//    ui->area_id_baseline->setCurrentIndex(13);
+//    ui->noAIM_baseline->setChecked(true);
 
     //on_actionStart_triggered();
 
@@ -1070,5 +1015,4 @@ void MainWindow::on_actionDoTest_triggered()
 //    qInfo()<< "Process-ENV: "+QProcessEnvironment::systemEnvironment().value("LIST_OF_ITEMS") <<endl;
 
 }
-
 

@@ -68,7 +68,7 @@ QWidget#contenedorTab2 {
        </font>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -80,12 +80,26 @@ QWidget#contenedorTab2 {
        <layout class="QGridLayout" name="gridLayout_12">
         <item row="0" column="0">
          <widget class="QTabWidget" name="tabWebReport">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
           <property name="currentIndex">
            <number>0</number>
           </property>
+          <property name="tabsClosable">
+           <bool>true</bool>
+          </property>
+          <property name="movable">
+           <bool>false</bool>
+          </property>
           <widget class="QWidget" name="tab_6">
            <attribute name="title">
-            <string>Page 1</string>
+            <string>Home</string>
            </attribute>
            <layout class="QGridLayout" name="gridLayout_11">
             <item row="1" column="0">
@@ -111,68 +125,6 @@ QWidget#contenedorTab2 {
             </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="tab_7">
-           <attribute name="title">
-            <string>Page 2</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_13">
-            <item row="0" column="0">
-             <widget class="QLineEdit" name="URL_webView_2">
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QWebView" name="webView_2">
-              <property name="url">
-               <url>
-                <string>about:blank</string>
-               </url>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_8">
-           <attribute name="title">
-            <string>Page 3</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_14">
-            <item row="0" column="0">
-             <widget class="QLineEdit" name="URL_webView_3"/>
-            </item>
-            <item row="1" column="0">
-             <widget class="QWebView" name="webView_3">
-              <property name="url">
-               <url>
-                <string>about:blank</string>
-               </url>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_9">
-           <attribute name="title">
-            <string>Page 4</string>
-           </attribute>
-          </widget>
-          <widget class="QWidget" name="tab_10">
-           <attribute name="title">
-            <string>Page 5</string>
-           </attribute>
-          </widget>
-          <widget class="QWidget" name="tab_11">
-           <attribute name="title">
-            <string>Page 6</string>
-           </attribute>
-          </widget>
-          <widget class="QWidget" name="tab_12">
-           <attribute name="title">
-            <string>Page 7</string>
-           </attribute>
-          </widget>
          </widget>
         </item>
        </layout>
@@ -181,7 +133,7 @@ QWidget#contenedorTab2 {
        <attribute name="title">
         <string>Analizar BASELINE</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_9">
+       <layout class="QGridLayout" name="gridLayout_13">
         <item row="0" column="0">
          <widget class="QWidget" name="contenedorTab2" native="true">
           <layout class="QGridLayout" name="gridLayout_8">
@@ -480,7 +432,7 @@ QWidget#contenedorTab2 {
          </widget>
         </item>
         <item row="1" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
            <widget class="QPlainTextEdit" name="baseline_output">
             <property name="sizePolicy">
@@ -506,43 +458,78 @@ QWidget#contenedorTab2 {
            </widget>
           </item>
           <item>
-           <widget class="QTableWidget" name="tablaResultadoBaselines">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-             </font>
-            </property>
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="editTriggers">
-             <set>QAbstractItemView::NoEditTriggers</set>
-            </property>
-            <property name="alternatingRowColors">
-             <bool>true</bool>
-            </property>
-            <attribute name="horizontalHeaderStretchLastSection">
-             <bool>true</bool>
-            </attribute>
-            <attribute name="verticalHeaderShowSortIndicator" stdset="0">
-             <bool>false</bool>
-            </attribute>
-            <column>
-             <property name="text">
-              <string>Fecha</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>Resultado</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>URL</string>
-             </property>
-            </column>
-           </widget>
+           <layout class="QGridLayout" name="gridLayout_9">
+            <item row="1" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_11">
+              <item>
+               <spacer name="horizontalSpacer_12">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnReloadBL">
+                <property name="text">
+                 <string>Reload</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="data.qrc">
+                  <normaloff>:/images/reload_chk.png</normaloff>:/images/reload_chk.png</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="0" column="0">
+             <widget class="QTableWidget" name="tablaResultadoBaselines">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="autoFillBackground">
+               <bool>true</bool>
+              </property>
+              <property name="editTriggers">
+               <set>QAbstractItemView::NoEditTriggers</set>
+              </property>
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+              <property name="textElideMode">
+               <enum>Qt::ElideMiddle</enum>
+              </property>
+              <attribute name="horizontalHeaderStretchLastSection">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="verticalHeaderShowSortIndicator" stdset="0">
+               <bool>false</bool>
+              </attribute>
+              <column>
+               <property name="text">
+                <string>Fecha</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Tipo</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>URL</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
@@ -613,77 +600,7 @@ QWidget#contenedorTab2 {
        <attribute name="title">
         <string>Analizar REQUESTS</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_2">
-        <item row="2" column="0">
-         <layout class="QVBoxLayout" name="verticalLayout_17">
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_10">
-            <item>
-             <spacer name="horizontalSpacer_11">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_anal_requests">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Analizando el requests:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_nombre_requests">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>------------------------------</string>
-              </property>
-              <property name="textInteractionFlags">
-               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QProgressBar" name="progressBar_tab1">
-              <property name="value">
-               <number>0</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-        <item row="1" column="0">
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
+       <layout class="QGridLayout" name="gridLayout_14">
         <item row="0" column="0">
          <widget class="QWidget" name="contenedorTab1" native="true">
           <property name="font">
@@ -980,6 +897,153 @@ QWidget#contenedorTab2 {
            </item>
           </layout>
          </widget>
+        </item>
+        <item row="1" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_14">
+          <item>
+           <widget class="QPlainTextEdit" name="request_output">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>300</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="0">
+             <widget class="QTableWidget" name="tablaResultadoRequest">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="textElideMode">
+               <enum>Qt::ElideMiddle</enum>
+              </property>
+              <attribute name="horizontalHeaderStretchLastSection">
+               <bool>true</bool>
+              </attribute>
+              <column>
+               <property name="text">
+                <string>Fecha</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Tipo</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>URL</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_12">
+              <item>
+               <spacer name="horizontalSpacer_13">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnReloadR">
+                <property name="text">
+                 <string>Reload</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="data.qrc">
+                  <normaloff>:/images/reload_chk.png</normaloff>:/images/reload_chk.png</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item row="2" column="0">
+         <layout class="QVBoxLayout" name="verticalLayout_17">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <item>
+             <spacer name="horizontalSpacer_11">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_anal_requests">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Analizando el requests:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_nombre_requests">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>------------------------------</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QProgressBar" name="progressBar_tab1">
+              <property name="value">
+               <number>0</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
