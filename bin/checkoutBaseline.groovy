@@ -10,12 +10,10 @@ import es.als.io.IOUtils;
 import com.serena.dmclient.api.Request;
 import com.serena.dmclient.api.Project;
 import com.serena.dmclient.api.Baseline;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+
 
 public class checkoutBaseline {
 
-	//private static Logger log = Logger.getLogger(checkoutBaseline.class);
 	private static String product = "";  						// Producto a analizar
 	private static String project = "";  						// Proyecto a analizar 
 	private static String br_object = ""; 						// linea base o request
