@@ -22,9 +22,8 @@
         <file>bin/alsUtils.jar</file>
         <file>bin/checkoutBaseline.groovy</file>
         <file>bin/dmclient.jar</file>
-        <file>bin/log4j.properties</file>
-        <file>bin/plugin-custom.properties</file>
         <file>images/reload_chk.png</file>
         <file>bin/checkoutRequest.groovy</file>
+        <file>images/Clean.png</file>
     </qresource>
 </RCC>

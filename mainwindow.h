@@ -17,6 +17,8 @@
 #include <QMap>
 #include <QMapIterator>
 #include <QTableWidget>
+#include <QWebView>
+
 
 namespace Ui {
 class MainWindow;
@@ -48,6 +50,7 @@ public:
     void getExtensiones(QStringList lt);
     bool saveToHistory(QString filePath, QStringList data);
     bool loadHistoryFile(QString filePath, QTableWidget *tabla);
+    void getInfoFromReport();
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
@@ -61,6 +64,7 @@ public slots:
     void CheckoutDIM();
     void loadWebReport();
     void sceneTabRemove_slot(int index);
+    void showDetails(bool status);
 private slots:
     void on_actionStart_triggered();
     void on_btnSetear_clicked();
@@ -76,13 +80,14 @@ private slots:
     void on_btnIniciarAct_clicked();
     void on_actionDoTest_triggered();
     void on_btnReloadBL_clicked();
-
     void on_btnReloadR_clicked();
 
 signals:
     informeTerminado();
 private:
     Ui::MainWindow *ui;
+    QWebView *view;
+
     QString m_sSettingsFile;
     analizador* calc;
     QSettings *settings;

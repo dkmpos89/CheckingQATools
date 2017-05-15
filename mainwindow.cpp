@@ -9,7 +9,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QLoggingCategory>
-
+#include <QWebFrame>
+#include <QWebElement>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -36,7 +37,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, SIGNAL(informeTerminado()), this, SLOT(loadWebReport()));
 
     connect(ui->tabWebReport, SIGNAL(tabCloseRequested(int)), this, SLOT(sceneTabRemove_slot(int)));
-
 }
 
 MainWindow::~MainWindow()
@@ -64,13 +64,10 @@ void MainWindow::loadSettings()
     if(!QDir(path).exists()){
         QDir().mkdir(path);
         QFile::copy(":/config/checking_tools_settings.ini", path+"/checking_tools_settings.ini");
-        QFile::copy(":/config/lb_tools_settings.ini", path+"/lb_tools_settings.ini");
-
         QFile::copy(":/config/tfuncional_config.ini", path+"/tfuncional_config.ini");
         QFile::copy(":/config/checking_properties.ini", path+"/checking_properties.ini");
 
         QFile::setPermissions(path+"/checking_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/lb_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
         QFile::setPermissions(path+"/tfuncional_config.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
         QFile::setPermissions(path+"/checking_properties.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     }
@@ -88,16 +85,17 @@ void MainWindow::loadSettings()
     settings->endGroup();
 
     /* SETTINGS: carga del comboBox de ID DE PROYECTO */
-    settings->beginGroup("project");
-    QStringList listaProject = settings->childKeys();
+
+    settings->beginGroup("DIMPROJECTS");
+    QStringList listaProject = settings->allKeys();
 
     foreach (QString key, listaProject) {
         tmp = settings->value(key).toString();
-        ui->project_id_requests->addItem(tmp);
-        ui->project_id_baseline->addItem(tmp);
+        ui->project_id_requests->addItem(key.toUpper());
+        ui->project_id_baseline->addItem(key.toUpper());
 
-        ui->area_id_requests->addItem(key);
-        ui->area_id_baseline->addItem(key);
+        ui->area_id_requests->addItem(tmp);
+        ui->area_id_baseline->addItem(tmp);
     }
     settings->endGroup();
 
@@ -120,6 +118,7 @@ void MainWindow::loadSettings()
     /* Se intenta cargar el historial de analisis de Baselines desde el archivo /logBaselines.log y /logRequests.log */
     loadHistoryFile(QDir().currentPath()+"/logBaseline.log", ui->tablaResultadoBaselines);
     loadHistoryFile(QDir().currentPath()+"/logRequest.log", ui->tablaResultadoRequest);
+
 }
 
 void MainWindow::init()
@@ -400,11 +399,11 @@ void MainWindow::on_actionCMD_triggered()
 void MainWindow::on_btnFormato_clicked()
 {
     ui->statusBar->showMessage("Aplicando el formato a las lineas de entrada....", 2000);
-    QString m_SFile = QDir::currentPath()+"/config/lb_tools_settings.ini";
+    QString m_SFile = QDir::currentPath()+"/config/checking_tools_settings.ini";
     QSettings *config = new QSettings(m_SFile, QSettings::IniFormat);
     QString txsalida = "";
 
-    config->beginGroup("project");
+    config->beginGroup("DIMPROJECTS");
 
     QString textIn = ui->inputPane->toPlainText();
     QStringList listIn;
@@ -702,7 +701,7 @@ bool MainWindow::validarCampos(int id)
     QString area = "";
     QString current_proj = "";
     QString imputData = "";
-    QString project = "";
+    QString areaproject = "";
 
     switch(id)
     {
@@ -712,14 +711,14 @@ bool MainWindow::validarCampos(int id)
     }
 
     //settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
-    settings->beginGroup("project");
-    project = settings->value(area).toString();
+    settings->beginGroup("DIMPROJECTS");
+    areaproject = settings->value(current_proj).toString();
     settings->endGroup();
 
     if(imputData.isEmpty()){ mflag = false; QMessageBox::warning(this,"[ERROR]", "Faltan datos");}
 
     //qInfo()<<area<<" - "<<current_proj<<" - "<<project<<endl;
-    if(current_proj!=project){ mflag = false; QMessageBox::warning(this,"[ERROR]", "El area: "+area+" no coincide con el proyecto: "+current_proj);}
+    if(area!=areaproject){ mflag = false; QMessageBox::warning(this,"[ERROR]", "El area: "+area+" no coincide con el proyecto: "+current_proj);}
 
     return mflag;
 
@@ -1035,6 +1034,30 @@ void MainWindow::on_actionProxy_Settings_triggered()
     proxyssetings->exec();
 }
 
+
+void MainWindow::getInfoFromReport()
+{
+    view = new QWebView();
+    QString urlString("http://checking:8080/report/qaking/Dimensions/Admision_Banco/COREBANCO/ADMISION_BANCO/COREBANCO_CR_PPROD_100/reportactionscript.html");
+    // Load the page
+    view->load(QUrl(urlString));
+    connect(view, SIGNAL(loadFinished(bool)), this, SLOT(showDetails(bool)));
+
+}
+void MainWindow::showDetails(bool status)
+{
+    if(status){
+        disconnect(view, SIGNAL(loadFinished(bool)), this, SLOT(showDetails(bool)));
+        QWebElement e = view->page()->mainFrame()->findFirstElement("div#sumreg_layer > ul");
+        QString pageString = e.isNull() ? "No se encontro el reporte" : e.toPlainText();
+        ui->baseline_output->insertPlainText(pageString+"\n");
+        ui->baseline_output->insertPlainText("TERMINADO\n");
+    }else{
+        ui->baseline_output->insertPlainText("Error #404\n");
+    }
+
+}
+
 /* Fin de la zona de pruebas */
 
 
@@ -1057,10 +1080,12 @@ void MainWindow::on_btnIniciarAct_clicked()
 void MainWindow::on_actionDoTest_triggered()
 {
 
-    ui->baseline_name->setText("FISA_NOCOBROFUNC_20170418_OBJ");
-    ui->project_id_baseline->setCurrentIndex(13);
-    ui->area_id_baseline->setCurrentIndex(13);
-    ui->noAIM_baseline->setChecked(true);
+//    ui->baseline_name->setText("FISA_NOCOBROFUNC_20170418_OBJ");
+//    ui->project_id_baseline->setCurrentIndex(13);
+//    ui->area_id_baseline->setCurrentIndex(13);
+//    ui->noAIM_baseline->setChecked(true);
+
+    getInfoFromReport();
 
     //on_actionStart_triggered();
 
@@ -1070,5 +1095,7 @@ void MainWindow::on_actionDoTest_triggered()
 //    qInfo()<< "Process-ENV: "+QProcessEnvironment::systemEnvironment().value("LIST_OF_ITEMS") <<endl;
 
 }
+
+
 
 
