@@ -11,6 +11,9 @@
 #include <QLoggingCategory>
 #include <QWebFrame>
 #include <QWebElement>
+#include <QMovie>
+#include <QInputDialog>
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -42,10 +45,38 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
-    for (int i = 0; i < listadeProcesos.size(); ++i) {
-        listadeProcesos[i]->kill();
-        listadeProcesos[i]->close();
+    for ( QProcess* qp : listadeProcesos )
+    {
+        qp->terminate();
+        qp->close();
+        qp->kill();
+        listadeProcesos.removeAll(qp);
     }
+}
+
+bool MainWindow::event(QEvent *event)
+{
+    if(event->type() == QEvent::Close){
+        if(listadeProcesos.size()>0){
+            QMessageBox::StandardButton reply;
+            reply = QMessageBox::question(this, "Cerrando programa...", tr(" Existen %1 procesos ejecutandose \n desea cerrar la aplicacion?").arg(QString::number(listadeProcesos.size())), QMessageBox::Yes|QMessageBox::No);
+            if (reply == QMessageBox::Yes)
+            {
+                for ( QProcess* qp : listadeProcesos )
+                {
+                    qp->terminate();
+                    qp->close();
+                    qp->kill();
+                    listadeProcesos.removeAll(qp);
+                }
+                QApplication::quit();
+            } else {
+                event->ignore();
+                return false;
+            }
+        }
+    }
+    return QWidget::event(event);
 }
 
 /* Funciones de Inicializacion */
@@ -61,16 +92,18 @@ void MainWindow::loadSettings()
     /* SETTINGS: crecacion del directorio 'config' y carga de los archivos '.ini' */
     QString tmp="";
     QString path = QDir::currentPath()+"/config";
-    if(!QDir(path).exists()){
-        QDir().mkdir(path);
-        QFile::copy(":/config/checking_tools_settings.ini", path+"/checking_tools_settings.ini");
-        QFile::copy(":/config/tfuncional_config.ini", path+"/tfuncional_config.ini");
-        QFile::copy(":/config/checking_properties.ini", path+"/checking_properties.ini");
+    if(QDir(path).exists())
+        QDir(path).removeRecursively();
 
-        QFile::setPermissions(path+"/checking_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/tfuncional_config.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/checking_properties.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-    }
+    QDir().mkdir(path);
+    QFile::copy(":/config/checking_tools_settings.ini", path+"/checking_tools_settings.ini");
+    QFile::copy(":/config/tfuncional_config.ini", path+"/tfuncional_config.ini");
+    QFile::copy(":/config/checking_properties.ini", path+"/checking_properties.ini");
+
+    QFile::setPermissions(path+"/checking_tools_settings.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/tfuncional_config.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/checking_properties.ini" , QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+
     settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
 
     /* SETTINGS: carga del comboBox de ID DE PRODUCTO */
@@ -114,11 +147,6 @@ void MainWindow::loadSettings()
 
     /* Crear el sub-directorio de reportes */
     mkdirTemp(true, "reportes");
-
-    /* Se intenta cargar el historial de analisis de Baselines desde el archivo /logBaselines.log y /logRequests.log */
-    loadHistoryFile(QDir().currentPath()+"/logBaseline.log", ui->tablaResultadoBaselines);
-    loadHistoryFile(QDir().currentPath()+"/logRequest.log", ui->tablaResultadoRequest);
-
 }
 
 void MainWindow::init()
@@ -151,8 +179,9 @@ void MainWindow::init()
     connect(ui->actionSalida_compuesta, &QAction::toggled, [=] (const bool val) {calc->setSalidaComp(val);} );
 /* End */
 
-/* Bloque de 'connect' para el cambio de pestañas */
-    //connect(ui->tabWidget, &QTabWidget::currentChanged, [=] (const int idx) { activarBotones(idx, true);  });
+/* Bloque de creacion de gif de carga en pestaña de baseline */
+    ui->loading_baseline->setVisible(false);
+    ui->loading_baseline->setMovie(loading_movie);
 /* End */
 
 /* Bloque de 'connect' para el cambio de Script AIM */
@@ -162,57 +191,90 @@ void MainWindow::init()
 
 /* Bloque de creaciones del binario ../bin/paexec.exe */
     QString path = QDir::currentPath()+"/bin";
-    if(!QDir(path).exists()){
-        QDir().mkdir(path);
-        QFile::copy(":/bin/paexec.exe", path+"/paexec.exe");
-        QFile::copy(":/bin/checkoutBaseline.groovy", path+"/checkoutBaseline.groovy");
-        QFile::copy(":/bin/checkoutRequest.groovy", path+"/checkoutRequest.groovy");
-        QFile::copy(":/bin/alsUtils.jar", path+"/alsUtils.jar");
-        QFile::copy(":/bin/dmclient.jar", path+"/dmclient.jar");
-        QFile::setPermissions(path+"/paexec.exe" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/checkoutBaseline.groovy" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/checkoutRequest.groovy" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/alsUtils.jar" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-        QFile::setPermissions(path+"/dmclient.jar" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-    }
+
+    if(QDir(path).exists())
+        QDir(path).removeRecursively();
+
+    QDir().mkdir(path);
+
+    QFile::copy(":/bin/paexec.exe", path+"/paexec.exe");
+    QFile::copy(":/bin/checkoutBaseline.groovy", path+"/checkoutBaseline.groovy");
+    QFile::copy(":/bin/checkoutRequest.groovy", path+"/checkoutRequest.groovy");
+    QFile::copy(":/bin/alsUtils.jar", path+"/alsUtils.jar");
+    QFile::copy(":/bin/dmclient.jar", path+"/dmclient.jar");
+
+    QFile::setPermissions(path+"/paexec.exe" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/checkoutBaseline.groovy" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/checkoutRequest.groovy" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/alsUtils.jar" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/dmclient.jar" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+
+
 /* End */
 
 /* Bloque de creaciones tabla Historial */
-    ui->historialTWidget->setColumnCount(7);
-    ui->historialTWidget->setHorizontalHeaderLabels(QStringList()<<"Date"<<"Product"<<"Project"<<"File Name"<<"URL"<<"Zip-file"<<"Status");
+    ui->historialTWidget->setColumnCount(3);
+    ui->historialTWidget->setHorizontalHeaderLabels(QStringList()<<"FECHA"<<"TIPO"<<"URL");
     ui->historialTWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->historialTWidget->horizontalHeader()->setResizeContentsPrecision(QHeaderView::Stretch);
+    //QHeaderView *header = new QHeaderView(Qt::Horizontal, ui->historialTWidget);
+    //header->resizeSection(2, QHeaderView::Stretch);
 /* End */
 
 /* Bloque de carga de la tabla Historial de baselines */
-    //
+    /* Se intenta cargar el historial de analisis de Baselines desde el archivo /logBaselines.log y /logRequests.log */
+    loadHistoryFile(QDir().currentPath()+"/logBaseline.log", ui->historialTWidget);
+    loadHistoryFile(QDir().currentPath()+"/logRequest.log", ui->historialTWidget);
 /* End */
 
+/* Inicializacion de la Consola de salida */
+    console = new QPlainTextEdit();
+    console->setReadOnly(true);
+    console->setFont(QFont("MS Shell Dlg 2",10));
+    ui->outConsole->setVisible(false);
+    ui->outConsole->setWidget(console);
+    ui->outConsole->setWindowTitle("Console");
+    ui->outConsole->toggleViewAction()->setIcon(QIcon(":/images/cmd.png"));
+    ui->outConsole->toggleViewAction()->setShortcut(QKeySequence("Ctrl+K"));
+    ui->menuView->addAction(ui->outConsole->toggleViewAction());
+/* End */
 }
 
-QProcess* MainWindow::initProcess()
+QProcess* MainWindow::initProcess(QString cmd)
 {
-    //QThread* thread = new QThread(this);
-    QProcess *proceso = new QProcess(this);
-    //proceso->moveToThread(thread);
+    QProcess* proceso = new QProcess(this);
+    QByteArray ba;
+    try {
 
-    proceso->setProcessChannelMode( QProcess::SeparateChannels );
-    proceso->start(UPDATER, ARGUMENTS, QProcess::ReadWrite);
-    proceso->waitForStarted(5000);
+        proceso->start(UPDATER, QProcess::ReadWrite);
+        proceso->setProcessChannelMode( QProcess::SeparateChannels );
 
-    QString cmd("cd "+WORKING_DIR+"\n");
-    proceso->write(cmd.toLatin1());
-    proceso->waitForFinished(1000);
+        QString cmdir("cd "+WORKING_DIR+"\n");
+        proceso->write(cmdir.toLatin1());
+        proceso->waitForFinished(500);
+        ba = proceso->readAll();//clean stdout
+        Q_UNUSED(ba);
 
-    connect(proceso, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
-    connect(proceso, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
+        writeText("Proceso creado. ID: "+QString::number(proceso->processId()), msg_notify);
 
-    writeText("Nuevo proceso creado. ID: "+QString::number(proceso->processId()), msg_notify);
+        listadeProcesos.append(proceso);
 
-    QByteArray ba = proceso->readAll();//clean stdout
-    Q_UNUSED(ba);
+        // se ejecuta el comando de analisis de la linea base o request
+        proceso->write(cmd.toLatin1());
+        proceso->waitForFinished(500);
 
-    listadeProcesos.append(proceso);
+        console->appendHtml(msgOk+cmd);
+        ba = proceso->readAll();//clean stdout
+        Q_UNUSED(ba);
+
+        connect(proceso, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+        connect(proceso, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
+
+    }catch(...){
+        console->appendHtml(msgEr+cmd);
+        return NULL;
+    }
+
     return proceso;
 }
 /* Fin de las funciones de Inicializacion */
@@ -221,86 +283,172 @@ QProcess* MainWindow::initProcess()
 /* Funciones de los Menus y Botones */
 void MainWindow::on_actionStart_triggered()
 {
-    QProcess *procPaExec, *prcGroovy;
-    QString cmd = "";
-    QString key = "";
-    QStringList lista;
-    idx = ui->tabWidget->currentIndex();
-    QPlainTextEdit *output = nullptr;
-    QString script = "";
+    if(!analisis_en_curso)
+    {
+        impFlag = true;                     // muestra todo el seguimiento en la salida del sumario
+        QString cmd = "";
+        QStringList lista;
+        idx = ui->tabWidget->currentIndex();
 
+        identificarTab(idx);
 
+        /* [1] - Si se cumple con los requisitos se creará un proceso que se ejecuta en el servidor de chk-qa */
+        if( validarCampos(idx) ){
+            settings->beginGroup("projectchk");
+            QString projecNameCHK = settings->value(area_id).toString();
+            settings->endGroup();
+
+            switch (idx) {
+                case 1:
+                    lista = ( QStringList()<<"1"<<projecNameCHK.trimmed()<<script_id<<product_id<<project_id<<object_id<<area_id<<object_id );
+                    cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
+                    /*Si no se ha hecho la busqueda de las extensiones del baseline se llaama al slot */
+                    if(listaExt.size()==0 || listaExt.value(listaExt.firstKey())!=ui->baseline_name->text() ){
+                        ui->linea_base_name->setText(ui->baseline_name->text());
+                        on_btnBuscarBL_clicked();
+                    }
+                    break;
+                case 2:
+                    callRequestGroovy();
+                    lista = ( QStringList()<<"2"<<projecNameCHK.trimmed()<<script_id<<product_id<<project_id<<object_id<<area_id );
+                    cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
+                    break;
+                default:
+                    QMessageBox::information(this, "ERROR", "Ocurrio un error durante la ejecucion del analisis, por favor intente nuevamente.");
+                    break;
+            }
+        }else{
+            return;
+        }
+        /* [1] END */
+
+        bloquarPanel(true,idx);
+        CursorCarga(true, idx);
+        checkearSalida(lista);
+
+        // Se inicia el proceso de analisis
+        if(initProcess(cmd)!=NULL)
+            analisis_en_curso = true;       // bandera de seguridad para el analisis actual - en ejecucion
+
+    }else{
+        QMessageBox::information(this, "Informacion", "Analisis en curso, por favor espere hasta que termine");
+    }
+}
+
+void MainWindow::on_actionStop_triggered()
+{
+    QMessageBox::StandardButton reply;
+    int numpr = listadeProcesos.size();
+    int result = 0;
+    try{
+        if(numpr>0){
+            reply = QMessageBox::question(this, "Cuidado!", "¿Detener todos los procesos?", QMessageBox::Yes|QMessageBox::No);
+            if (reply == QMessageBox::Yes) {
+                /* Se actualiza el icono de carga de los baseline */
+                for ( QProcess* qp : listadeProcesos )
+                {
+                    qp->terminate();
+                    qp->close();
+                    qp->kill();
+                    listadeProcesos.removeAll(qp);
+                }
+
+                bloquarPanel(false, idx);
+                CursorCarga(false, idx);
+                setLoading(false);
+                analisis_en_curso = false;
+                result = numpr - listadeProcesos.size();
+                console->appendHtml(msgOk+QString::number(result)+" procesos detenidos correctamente");
+            }
+        }else{
+            QMessageBox::critical(this, tr("ERROR"), tr("Actualmente no existen procesos que detener"));
+        }
+    }catch(...){
+        QMessageBox::critical(this, tr("ERROR"), tr("Ocurrio un problema al intentar terminar los procesos"));
+    }
+}
+
+void MainWindow::callRequestGroovy()
+{
+
+    final_output->clear();
+    QString commd = "groovy "+current_script+" "+product_id+" "+project_id+" "+object_id+" "+area_id+"\n";
+    QProcess *prcGroovy = initProcess(commd);
+
+    disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+
+    prcGroovy->setObjectName(QString::number(idx));
+    if ((prcGroovy->state()==QProcess::Running))
+    {
+        analisis_en_curso = true;
+        connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+    }else
+        console->appendHtml(msgEr+"GROOVY IS NOT READY");
+}
+
+void MainWindow::on_btnBuscarBL_clicked()
+{
+    if(!analisis_en_curso)
+    {
+        QString baseline_id = ui->linea_base_name->text();
+
+        if( !baseline_id.trimmed().isNull() && !baseline_id.trimmed().isEmpty() )
+        {
+            impFlag = true; // muestra todo el seguimiento en la salida del sumario
+            setLoading(true);
+            idx = ui->tabWidget->currentIndex();
+
+            identificarTab(idx);
+            object_id = baseline_id;
+
+            /*  Si está instalado groovy ejecuta una llamada a la api de dimensions par sacar las extensiones de los archivos */
+            final_output->clear();
+            QString commd = "groovy \""+current_script+"\" \""+baseline_id+"\"\n";
+
+            QProcess* prcGroovy = initProcess(commd);
+            prcGroovy->setObjectName(QString::number(idx));
+
+            if ((prcGroovy->state()==QProcess::Running))
+            {
+                analisis_en_curso = true;
+                disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+                connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+            }else
+                console->appendHtml(msgEr+"GROOVY IS NOT READY");
+        }else{
+            QMessageBox::critical(this,"ERROR", "Faltan datos: 'NOMBRE DE LA LINEA BASE' ");
+        }
+    }else{
+        QMessageBox::information(this, "Informacion", "Analisis en curso, por favor espere hasta que termine");
+    }
+}
+
+void MainWindow::identificarTab(int tab)
+{
     /* BLoque de carga de proyecto de checking */
-    if(idx==2) {
-        key = ui->area_id_requests->currentText();
+    if(tab==2) {
         script_id = ui->name_script_requests->text();
         product_id = ui->product_id_requests->currentText();
         project_id = ui->project_id_requests->currentText();
         object_id = ui->requests_id->text().trimmed();
         area_id = ui->area_id_requests->currentText();
-        output = ui->request_output;
-        script = "checkoutRequest.groovy";
+        final_output = ui->request_output;
+        current_script = "checkoutRequest.groovy";
     }
-    else if(idx==1){
-        key = ui->area_id_baseline->currentText();
+    else if(tab==1){
         script_id = ui->name_script_baseline->text();
         product_id = ui->product_id_baseline->currentText();
         project_id = ui->project_id_baseline->currentText();
         object_id = ui->baseline_name->text().trimmed();
         area_id = ui->area_id_baseline->currentText();
-        output = ui->baseline_output;
-        script = "checkoutBaseline.groovy";
+        final_output = ui->baseline_output;
+        current_script = "checkoutBaseline.groovy";
     }
+}
 
-    /* [1] - Si se cumple con los requisitos se creará un proceso que se ejecuta en el servidor de chk-qa */
-    if(validarCampos(idx)){
-
-        /* [2] - Si está instalado groovy ejecuta una llamada a la api de dimensions par sacar las extensiones de los archivos */
-        prcGroovy = initProcess();
-        prcGroovy->setObjectName(QString::number(idx));
-        if ((prcGroovy->state()==QProcess::Running))
-        {
-            output->clear();
-            QString commd = "groovy "+script+" "+product_id+" "+project_id+" "+object_id+" "+area_id+"\n";
-            disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
-
-            prcGroovy->write(commd.toLatin1());
-            prcGroovy->waitForFinished(1000);
-            QByteArray ba = prcGroovy->readAll();//clean stdout
-            Q_UNUSED(ba);
-
-            //connect(prcGroovy, &QProcess::readyReadStandardOutput, [=]() { this->CheckoutDIM(idx); } );
-            connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
-        }else
-            MsgBlOut("groovy is not ready!\n", output);
-
-        procPaExec = initProcess();
-        settings->beginGroup("projectchk");
-        QString projecNameCHK = settings->value(key).toString();
-        settings->endGroup();
-        /* BLoque de carga de proyecto de checking */
-
-        if(procPaExec->state()==QProcess::Running){
-            if(idx==1){
-                lista = ( QStringList()<<"1"<<projecNameCHK<<script_id<<product_id<<project_id<<object_id<<area_id<<object_id );
-                cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
-            }else if(idx==2){
-                lista = ( QStringList()<<"2"<<projecNameCHK<<ui->name_script_requests->text()<<ui->product_id_requests->currentText()<<ui->project_id_requests->currentText()<<ui->requests_id->text().trimmed()<<ui->area_id_requests->currentText() );
-                cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
-            }
-        }else{
-            writeText("^ERROR: El proceso de 'paExec'' no esta corriendo!", msg_alert);
-            return;
-        }
-    }else{
-        return;
-    }
-    /* [1] END */
-
-    procPaExec->write(cmd.toLatin1());
-    bloquarPanel(true,idx);
-    CursorCarga(true, idx);
-    checkearSalida(lista);
+void MainWindow::on_actionGetProcess_triggered()
+{
+    QMessageBox::information(this, "Informacion", QString("Procesos actuales: "+QString::number(listadeProcesos.size())));
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -391,11 +539,6 @@ void MainWindow::on_actionEliminar_Duplicados_triggered()
     ui->textAreaSalida->setPlainText(listaSalida.join("\n"));
 }
 
-void MainWindow::on_actionCMD_triggered()
-{
-    //
-}
-
 void MainWindow::on_btnFormato_clicked()
 {
     ui->statusBar->showMessage("Aplicando el formato a las lineas de entrada....", 2000);
@@ -431,44 +574,9 @@ void MainWindow::on_btnFormato_clicked()
     config->endGroup();
 }
 
-void MainWindow::on_btnReloadBL_clicked()
+void MainWindow::on_btnReload_clicked()
 {
-    QItemSelectionModel *select = ui->tablaResultadoBaselines->selectionModel();
-    QModelIndex index = select->currentIndex();
-
-    if(select->hasSelection())
-    {
-        int row = index.row();
-        QString dataURL = index.sibling(row, 2).data().toString();
-        QString dataTipo = index.sibling(row, 1).data().toString();
-
-        QLineEdit *URL = new QLineEdit(ui->tabWebReport);
-        URL->setReadOnly(true);
-        QWebView *report = new QWebView(ui->tabWebReport);
-
-        QWidget *centralWidget = new QWidget();
-        centralWidget->setLayout( new QGridLayout() );
-        centralWidget->layout()->addWidget( URL );
-        centralWidget->layout()->addWidget( report );
-        int reid = ui->tabWebReport->addTab( centralWidget, dataTipo );
-
-        URL->setText(dataURL);
-        report->load(QUrl(dataURL));
-
-        ui->tabWidget->setCurrentIndex(0);
-        ui->tabWebReport->setCurrentIndex(reid);
-
-    }
-    else{
-        QMessageBox::information(this, "Info:",
-                              "Primero debes seleccionar un informe de la tabla.",
-                              QMessageBox::Ok);
-    }
-}
-
-void MainWindow::on_btnReloadR_clicked()
-{
-    QItemSelectionModel *select = ui->tablaResultadoRequest->selectionModel();
+    QItemSelectionModel *select = ui->historialTWidget->selectionModel();
     QModelIndex index = select->currentIndex();
 
     if(select->hasSelection())
@@ -545,7 +653,7 @@ void MainWindow::readError()
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
 
-    QString error = QString::fromLocal8Bit(procPaExec->readAllStandardError());
+    QString error = QString::fromLatin1(procPaExec->readAllStandardError());
     writeText(error, Qt::red);
 }
 
@@ -565,14 +673,26 @@ void MainWindow::readDotout()
     }
 
     if(buff.contains("READYOUT")){
-        writeText("^ [Archivo '.out' encontrado] - Estado del analisis: FINALIZADO", msg_notify);
+        writeText("[ '.out' encontrado ] - Estado del analisis: FINALIZADO", msg_notify);
         emit informeTerminado();
         if(buff.contains("FAILOUT"))
-            writeText("^ [Archivo '.err' encontrado] - Estado del analisis: ERROR", msg_alert);
+            writeText("[ '.err' encontrado ] - Estado del analisis: finalizado con ERROR", msg_alert);
         bloquarPanel(false, idp);
         CursorCarga(false, idp);
         player->play();
     }
+}
+
+void MainWindow::outConsole(QString cmd)
+{  
+
+    QObject *sender = QObject::sender();
+    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
+    qInfo()<<"outConsole :"<<procPaExec->processId()<<endl;
+
+    qInfo()<<cmd<<endl;
+
+    //console->appendPlainText(procPaExec->readAll());
 }
 
 void MainWindow::bloquarPanel(bool val, int id)
@@ -581,10 +701,8 @@ void MainWindow::bloquarPanel(bool val, int id)
     switch(id)
     {
         case 1: ui->contenedorTab2->setEnabled(!val);
-                ui->btnReloadBL->setEnabled(!val);
                 break;
         case 2: ui->contenedorTab1->setEnabled(!val);
-                ui->btnReloadR->setEnabled(!val);
                 break;
         default: QMessageBox::critical(this, "___Error General___", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
     }
@@ -613,7 +731,7 @@ void MainWindow::downloadFinished(QNetworkReply *reply)
 void MainWindow::sceneTabRemove_slot(int index)
 {
     if(index>0){
-        ui->tabWebReport->currentWidget()->deleteLater();
+        //ui->tabWebReport->currentWidget()->deleteLater();
         ui->tabWebReport->removeTab(index);
     }
 }
@@ -652,11 +770,30 @@ bool MainWindow::loadHistoryFile(QString filePath, QTableWidget *tabla)
             tabla->setRowCount(tabla->rowCount()+1);
 
             for (int var = 0; var < data.size(); ++var)
-                tabla->setItem(nrows,var,new QTableWidgetItem(data[var]));
+                tabla->setItem(nrows,var,new QTableWidgetItem(data.at(var)));
         }
         logFile.close();
     }
+    tabla->setSortingEnabled(true);
+    tabla->sortItems(0);
     return true;
+}
+
+void MainWindow::setLoading(bool b)
+{
+    if(b)
+        loading_movie->start();
+    else
+        loading_movie->stop();
+
+    ui->btnBuscarBL->setVisible(!b);
+    ui->loading_baseline->setVisible(b);
+    ui->linea_base_name->setEnabled(!b);
+}
+
+void MainWindow::rstrip(QString &str){
+    str = str.simplified();
+    str.remove(QRegExp("\\s+"));
 }
 
 /* Fin de Slots de control */
@@ -668,8 +805,12 @@ void MainWindow::activarBotones(int id, bool b)
     switch(id)
     {
         case 0: break;
-        case 1: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
-        case 2: ui->actionStart->setEnabled(b);ui->actionStop->setEnabled(b); break;
+        case 1: ui->actionStart->setEnabled(b);
+                //ui->actionStop->setEnabled(b);
+                break;
+        case 2: ui->actionStart->setEnabled(b);
+                //ui->actionStop->setEnabled(b);
+                break;
         case 3: break;
         default: break;
     }
@@ -707,7 +848,7 @@ bool MainWindow::validarCampos(int id)
     {
         case 1: area = ui->area_id_baseline->currentText(); current_proj = ui->project_id_baseline->currentText(); imputData = ui->baseline_name->text().trimmed(); break;
         case 2: area = ui->area_id_requests->currentText(); current_proj = ui->project_id_requests->currentText(); imputData = ui->requests_id->text().trimmed(); break;
-        default: QMessageBox::warning(this,"CHKTools : ERROR!", "Imposible realizar el paso de validación!" ); return false; break;
+        default: QMessageBox::warning(this,"ERROR", "Imposible realizar el paso de validación!" ); return false; break;
     }
 
     //settings = new QSettings(m_sSettingsFile, QSettings::IniFormat);
@@ -760,40 +901,6 @@ bool MainWindow::saveToDisk(const QString &filename, QIODevice *data)
     return true;
 }
 
-void MainWindow::addToHistorial(QStringList data)
-{
-    QString proyecto = "buscarProyecto(atr)"; //Se debe buscar el nombre del proyecto que tiene en checking asociado al atributo --> idealmente se deberia buscar en algun archivo de cnfiguraciones donde este la lista de los nombres.
-    QString url = "http://checking:8080/report/auditrep/Dimensions/"+proyecto+"/"+data[0]+"/"+data[1]+"/"+data[2]+"/auditrep.html";
-
-    int rowcont = ui->historialTWidget->rowCount();
-    ui->historialTWidget->setRowCount(rowcont+1);
-
-    QString fecha_actual = QDateTime::currentDateTime().toString("dd.MM.yyyy - hh:mm");
-
-    QToolButton *icotool = new QToolButton();
-    icotool->setIcon(QIcon(QPixmap(":/images/wr-icon.png")));
-    icotool->setIconSize(QSize(30,30));
-    icotool->setFixedHeight(30);
-    icotool->setFixedWidth(30);
-    icotool->setAutoRaise(true);
-    icotool->setText(QString::number(rowcont));
-
-    QLabel *urlabel = new QLabel();
-    urlabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    urlabel->setOpenExternalLinks(true);
-    urlabel->setTextFormat(Qt::RichText);
-    urlabel->setText("<a href=\""+url+"/\">Informe de violaciones</a>");
-
-    ui->historialTWidget->setItem(rowcont, 0, new QTableWidgetItem(fecha_actual));
-    ui->historialTWidget->setItem(rowcont, 1, new QTableWidgetItem(data[0]));
-    ui->historialTWidget->setItem(rowcont, 2, new QTableWidgetItem(data[1]));
-    ui->historialTWidget->setItem(rowcont, 3, new QTableWidgetItem(data[2]));
-    ui->historialTWidget->setCellWidget(rowcont, 4, urlabel);
-    ui->historialTWidget->setCellWidget(rowcont, 5, icotool);
-    ui->historialTWidget->setItem(rowcont, 6, new QTableWidgetItem("En ejecucion Checking-QA"));
-
-}
-
 void MainWindow::CursorCarga(bool b, int id)
 {
     switch(id)
@@ -811,14 +918,13 @@ void MainWindow::checkearSalida(QStringList arg)
 {
 
     ui->statusBar->showMessage("Analizando: "+arg[5]+" por favor espere....", 5000);
-    QProcess *proSalida = initProcess();
+    // quitar espacios del elemento arg[1] corresponde al nombre del proyecto en checkingqa
+    rstrip(arg[1]);
+    QString cmd = "START /B /WAIT "+chkproperties->value("exepa").toString()+" \\\\"+chkproperties->value("ip").toString()+" -u "+chkproperties->value("user").toString()+" -p "+chkproperties->value("pass").toString()+" "+chkproperties->value("pathmo").toString()+chkproperties->value("existfile").toString()+" "+arg[3]+" "+arg[4]+" "+arg[5]+" "+arg[1]+"\n";
+    QProcess *proSalida = initProcess(cmd);
     disconnect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
     connect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readDotout()) );
-
-    QString cmd = "START /B /WAIT "+chkproperties->value("exepa").toString()+" \\\\"+chkproperties->value("ip").toString()+" -u "+chkproperties->value("user").toString()+" -p "+chkproperties->value("pass").toString()+" "+chkproperties->value("pathmo").toString()+chkproperties->value("existfile").toString()+" "+arg[3]+" "+arg[4]+" "+arg[5]+" "+arg[1]+"\n";
-    writeText(cmd, msg_info);
     proSalida->setObjectName(arg[0]);
-    proSalida->write(cmd.toLatin1());
 
 }
 
@@ -875,9 +981,32 @@ bool MainWindow::buscarLB(QString lbase, QString *tmpA, QSettings *config)
     return false;
 }
 
-void MainWindow::MsgBlOut(QString msg, QPlainTextEdit *QP)
+void MainWindow::MsgBlOut(QString msg, QTextEdit *QP)
 {
-    QP->insertPlainText(msg);
+    QStringList lista_str = msg.split("\n");
+    foreach ( QString str, lista_str )
+    {
+        if( !str.isEmpty() && !str.isNull() )
+            QP->insertHtml(str+"<br>");
+    }
+}
+
+void MainWindow::putHTML(QStringList str, QTextEdit *QP)
+{
+    str.pop_front();
+    QString out = "<table border='1' style=' margin-top:0px; margin-bottom:0px; margin-left:80px; margin-right:0px;' width='80%' cellspacing='0' cellpadding='1'><tr><td><p align='center' style='margin-top:0px; margin-bottom:0px; margin-left:50px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'><span style='font-weight:600;'>Component</span></p></td><td><p align='center' style='margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'><span style='font-weight:600;'>All Stages</span></p></td></tr>";
+    for(QString it : str)
+    {
+        QStringList items = it.split("/");
+
+        out+="<tr><td>";
+        out+="<p style=' margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'>"+items[0]+"</p>";
+        out+="</td><td>";
+        out+="<p style=' margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'>"+items[1]+"</p>";
+        out+="</td></tr>";
+    }
+    out+="</table><br>";
+    QP->insertHtml(out);
 }
 
 void MainWindow::CheckoutDIM()
@@ -888,7 +1017,8 @@ void MainWindow::CheckoutDIM()
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
     QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
-    QPlainTextEdit *currPTEdit;
+
+    QTextEdit *currPTEdit;
     int id = procPaExec->objectName().toInt();
 
     if(id == 1)
@@ -896,38 +1026,75 @@ void MainWindow::CheckoutDIM()
     else
         currPTEdit = ui->request_output;
 
-    MsgBlOut(buff, currPTEdit);
+    if(impFlag){
+        buff.replace("\r\n", "\n");
+        MsgBlOut(buff, currPTEdit);
+    }
+
+    if(buff.contains("INICIO"))
+       impFlag = false;
+
     output__dm.append(buff);
 
-    if(buff.contains("PROCESO-TERMINADO-SUCCESS"))
+    if(buff.contains("SUCCESS"))
     {
         output__dm.replace("\r\n", "\n");
         lista_lineas = output__dm.split("\n");
 
         /* Desde [INICIO] hasta [FIN] estan los nombres de los items de la linea base */
-        ini = lista_lineas.lastIndexOf("[INICIO]");
-        fin = lista_lineas.lastIndexOf("[FIN]");
+        ini = lista_lineas.lastIndexOf("## INICIO");
+        fin = lista_lineas.lastIndexOf("## FIN");
         int tam = fin - ini;
 
         /* Se calcula la sub lista de los nombres de los items y se obtiene sus extensiones */
         disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+
+        connect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(ImprimirDetallesDIM()) );
+
         getExtensiones(lista_lineas.mid(ini, tam));
+        putHTML(lista_lineas.mid(ini, tam), currPTEdit);
+        MsgBlOut("## FIN", currPTEdit);
+
+        setLoading(false);
+        analisis_en_curso = false;
         return;
 
-    }else if(buff.contains("PROCESO-TERMINADO-FAIL")){
-        MsgBlOut("[ERROR] No se pueden descargar los componentes desde Dimensions.", currPTEdit);
+    }else if(buff.contains("FAIL")){
+        MsgBlOut("<strong><span style='color:red;margin-left:80px;'>[ ERROR ] : </span></strong> No se puede descargar los componentes desde Dimensions.", currPTEdit);
         disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+
+        setLoading(false);
+        analisis_en_curso = false;
         return;
     }
 }
 
+void MainWindow::ImprimirDetallesDIM(){
+    QObject *sender = QObject::sender();
+    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
+    QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
+
+    MsgBlOut(buff, ui->baseline_output);
+}
+
 void MainWindow::getExtensiones(QStringList lt)
 {
-    QTableWidget *tablaSalida;
+    listaExt.clear();
+    lt.pop_front();
+    for(QString it : lt)
+    {
+        QStringList aux = it.split("/");
+        QString ext = aux[0].mid(aux[0].lastIndexOf("."));
+        listaExt.insert(ext, object_id);
+    }
+}
+
+void MainWindow::loadWebReport()
+{
+    QTableWidget *tablaSalida = ui->historialTWidget;
     QString logPath = "";
-    QString fecha = QDateTime(QDate().currentDate()).toString("dd-MM-yyyy");
+    QString fecha = QDateTime(QDate().currentDate()).toString("yyyy-MM-dd");
     int nrows = 0;
-    lt.pop_front(); // quitamos la etiqueta [INICIO] al principio del QStringList
     mapURLs.clear();
 
     //[projectchk]
@@ -935,31 +1102,34 @@ void MainWindow::getExtensiones(QStringList lt)
     QString projecNameCHK = settings->value(area_id).toString();
     settings->endGroup();
 
-    for(QString it : lt)
+    //[dmreport]
+    settings->beginGroup("dmreport");
+    QString dm_project_id = settings->value(area_id).toString();
+    if(project_id.endsWith("_PRE")){
+        dm_project_id = project_id;
+        console->appendHtml(msgInf+"ANALISIS DE PROYECTO "+dm_project_id+": CON RAMA DE PRE");
+    }
+    settings->endGroup();
+
+    for(QString ext : listaExt.keys())
     {
-        QString ext = it.mid(it.lastIndexOf("."));
+        if(LIST_PLSQL.contains(ext)) mapURLs.insert("plsql", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportplsql.html");
+        if(LIST_JAVA.contains(ext)) mapURLs.insert("java", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportjava.html");
+        if(LIST_ACTIONSCRIPT.contains(ext)) mapURLs.insert("actionscript", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportactionscript.html");
+        if(LIST_COBOL.contains(ext)) mapURLs.insert("cobol", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportcobol.html");
+        if(LIST_ASP.contains(ext)) mapURLs.insert("asp", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportasp.html");
+        if(LIST_JSP.contains(ext)) mapURLs.insert("jsp", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportjsp.html");
+        if(LIST_JAVASCRIPT.contains(ext)) mapURLs.insert("javascript", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportjavascript.html");
+    }
+    /*Se limpia el map para el siguiente analisis */
+    listaExt.clear();
 
-        if(LIST_PLSQL.contains(ext)) mapURLs.insert("plsql", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportplsql.html");
-        if(LIST_JAVA.contains(ext)) mapURLs.insert("java", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportjava.html");
-        if(LIST_ACTIONSCRIPT.contains(ext)) mapURLs.insert("actionscript", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportactionscript.html");
-        if(LIST_COBOL.contains(ext)) mapURLs.insert("cobol", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportcobol.html");
-        if(LIST_ASP.contains(ext)) mapURLs.insert("asp", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportasp.html");
-        if(LIST_JSP.contains(ext)) mapURLs.insert("jsp", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportjsp.html");
-        if(LIST_JAVASCRIPT.contains(ext)) mapURLs.insert("javascript", BASE_URL+projecNameCHK+"/"+product_id+"/"+project_id+"/"+object_id+"/reportjavascript.html");
-
-    }
-    if(idx==1){
-        tablaSalida = ui->tablaResultadoBaselines;
-        logPath = QDir().currentPath()+"/logBaseline.log";
-    }
-    else {
-        tablaSalida = ui->tablaResultadoRequest;
-        logPath = QDir().currentPath()+"/logRequest.log";
-    }
+    logPath = idx==1 ? QDir().currentPath()+"/logBaseline.log" : QDir().currentPath()+"/logRequest.log";
 
     QMapIterator<QString, QString> i(mapURLs);
     while (i.hasNext()) {
         i.next();
+        /*[Insertar en tabla]*/
         nrows = tablaSalida->rowCount();
         tablaSalida->setRowCount(tablaSalida->rowCount()+1);
 
@@ -968,17 +1138,9 @@ void MainWindow::getExtensiones(QStringList lt)
         tablaSalida->setItem(nrows,2,new QTableWidgetItem(i.value()));
 
         saveToHistory(logPath, (QStringList()<<fecha<<i.key()<<i.value()));
+        /*[END]*/
 
-    }
-
-}
-
-void MainWindow::loadWebReport()
-{
-    QMapIterator<QString, QString> i(mapURLs);
-    while (i.hasNext()) {
-        i.next();
-
+        /*[Cargar reporte]*/
         QLineEdit *URL = new QLineEdit(ui->tabWebReport);
         URL->setReadOnly(true);
         QWebView *report = new QWebView(ui->tabWebReport);
@@ -991,6 +1153,7 @@ void MainWindow::loadWebReport()
 
         URL->setText(i.value());
         report->load(QUrl(i.value()));
+        /*[END]*/
 
     }
 }
@@ -1034,7 +1197,6 @@ void MainWindow::on_actionProxy_Settings_triggered()
     proxyssetings->exec();
 }
 
-
 void MainWindow::getInfoFromReport()
 {
     view = new QWebView();
@@ -1044,6 +1206,7 @@ void MainWindow::getInfoFromReport()
     connect(view, SIGNAL(loadFinished(bool)), this, SLOT(showDetails(bool)));
 
 }
+
 void MainWindow::showDetails(bool status)
 {
     if(status){
@@ -1067,34 +1230,33 @@ void MainWindow::showDetails(bool status)
 
 void MainWindow::on_btnIniciarAct_clicked()
 {
-    QProcess *procPaExec;
-    QString cmd = "";
-    cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -w D:\\dimensions\\pendiente\\ -s cmd.exe\n";
-    procPaExec = initProcess();
-    procPaExec->write(cmd.toLatin1());
-    procPaExec->waitForStarted(3000);
-    procPaExec->write("DIR /B\n");
+    QString cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -w D:\\dimensions\\pendiente\\ -s cmd.exe\n";
+    QProcess *proSalida = initProcess(cmd);
+
+    if(proSalida) qInfo()<<"DESCARGANDO..."<<endl ;
 
 }
 
 void MainWindow::on_actionDoTest_triggered()
 {
+    bool ok = false;
+    QString text = QInputDialog::getText(this, tr("Ingrese el texto aqui:"), tr("Text here:"), QLineEdit::Normal, "", &ok);
 
-//    ui->baseline_name->setText("FISA_NOCOBROFUNC_20170418_OBJ");
-//    ui->project_id_baseline->setCurrentIndex(13);
-//    ui->area_id_baseline->setCurrentIndex(13);
-//    ui->noAIM_baseline->setChecked(true);
-
-    getInfoFromReport();
-
-    //on_actionStart_triggered();
-
-//    QByteArray listOFitems = qgetenv("LIST_OF_ITEMS");
-//    QString StringItems(listOFitems);
-//    qInfo()<< "getENV: "+StringItems<<endl;
-//    qInfo()<< "Process-ENV: "+QProcessEnvironment::systemEnvironment().value("LIST_OF_ITEMS") <<endl;
+    if(ok){
+        QString colorMsg = "<strong><span style='color:"+text+";margin-left:80px;'>[ WARNING ] : </span></strong>";
+        console->appendHtml(colorMsg);
+    }
 
 }
+
+
+
+
+
+
+
+
+
 
 
 

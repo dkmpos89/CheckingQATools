@@ -25,5 +25,8 @@
         <file>images/reload_chk.png</file>
         <file>bin/checkoutRequest.groovy</file>
         <file>images/Clean.png</file>
+        <file>images/Search.ico</file>
+        <file>images/743.gif</file>
+        <file>images/procesos.png</file>
     </qresource>
 </RCC>
