@@ -3,7 +3,6 @@
 
 #include <QMainWindow>
 #include <QSettings>
-#include "analizador.h"
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -19,7 +18,9 @@
 #include <QTableWidget>
 #include <QWebView>
 #include <QMovie>
-
+#include "analizador.h"
+#include "analysisparameters.h"
+#include <QLineEdit>
 
 namespace Ui {
 class MainWindow;
@@ -28,7 +29,6 @@ class MainWindow;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
 public:
     bool analisis_en_curso = false;
     QMovie *loading_movie = new QMovie(":/images/743.gif");
@@ -38,18 +38,18 @@ public:
 
     void loadSettings();
     void init();
+    void initSideBar();
+    void initWebBrowser();
+    void initMediaPlayer();
     void writeText(QString text, int color);
-    QProcess *initProcess(QString cmd);
-    void activarBotones(int id, bool b);
+    QProcess *initProcess(QString cmd, QString obj="");
     bool saveToDisk(const QString &filename, QIODevice *data);
     QString saveFileName(const QUrl &url);
     bool validarCampos(int id);
-    void setConfigProgressBar(QProgressBar *pg, bool bp=true, int min=0, int max=99);
-    void CursorCarga(bool b, int id);
-    void checkearSalida(QStringList arg);
+    void CursorCarga(bool b);
     void mkdirTemp(bool f, QString dir);
     bool buscarLB(QString lbase, QString *tmpA, QSettings *config);
-    void getExtensiones(QStringList lt);
+    void getExtensiones(QStringList lt, QString objName);
     bool saveToHistory(QString filePath, QStringList data);
     bool loadHistoryFile(QString filePath, QTableWidget *tabla);
     void getInfoFromReport();
@@ -57,24 +57,27 @@ public:
     void putHTML(QStringList str, QTextEdit *QP);
     bool event(QEvent *event);
     void identificarTab(int tab);
-    void callRequestGroovy();
-    void setLoading(bool b);
+    void setLoadingBaseline(bool b);
+    void setLoadingRequest(bool b);
+    void initConsole();
+    void logMsg(QString text);
+    QString address();
 public slots:
     void update_Geometry();
     void imprimirSalida(QStringList lista);
     void readOutput();
     void readError();
-    void bloquarPanel(bool val, int id);
+    void bloquarPanel(bool val, int id=-1);
     void downloadFinished(QNetworkReply *reply);
-    void readDotout();
     void mostrarSalidaDM(bool b, QString s);
-    void MsgBlOut(QString msg, QTextEdit *QP);
+    void MsgBlOut(QString msg, QTextEdit *tE);
     void CheckoutDIM();
-    void loadWebReport();
+    void loadWebReport(QString objName);
     void sceneTabRemove_slot(int index);
     void showDetails(bool status);
     void ImprimirDetallesDIM();
-    void outConsole(QString cmd);
+    void setProgressBar(int a, int b);
+
 private slots:
     void on_actionStart_triggered();
     void on_btnSetear_clicked();
@@ -85,17 +88,22 @@ private slots:
     void on_actionGet_triggered();
     void on_actionTest_triggered();
     void on_actionProxy_Settings_triggered();
-    void on_btnFormato_clicked();
-    void on_btnIniciarAct_clicked();
     void on_actionDoTest_triggered();
     void on_btnReload_clicked();
     void on_actionStop_triggered();
     void on_actionGetProcess_triggered();
     void on_btnBuscarBL_clicked();
+    void on_btnBuscarR_clicked();
+    void on_actionGo_triggered();
+    void on_btnHome_clicked();
+    void on_btnRefresh_clicked();
+
 signals:
-    informeTerminado();
+    informeTerminado(QString objName);
 private:
     Ui::MainWindow *ui;
+    //QLineEdit* addressEdit;
+    QProgressBar *pg;
     QWebView *view;
     QPlainTextEdit *console;
     QString m_sSettingsFile;
@@ -106,28 +114,23 @@ private:
     QMediaPlayer *player;
     int cvolume = 50;
 
-    const QString msgEr = "<strong><span style='color:red;margin-top:0px; margin-bottom:0px; margin-left:80px; margin-right:0px;'>[  ERROR  ] : </span></strong>";
-    const QString msgOk = "<strong><span style='color:green;margin-top:0px; margin-bottom:0px; margin-left:80px; margin-right:0px;'>[ CORRECTO ] : </span></strong>";
-    const QString msgInf = "<strong><span style='color:#FAEB0F;margin-top:0px; margin-bottom:0px; margin-left:80px; margin-right:0px;'>[ WARNING ] : </span></strong>";
+    const QString msgEr = "<strong><span style='color:red;margin-left:80px;'>[ E R R O R ] : </span></strong>";
+    const QString msgOk = "<strong><span style='color:green;margin-left:80px;'>[ CORRECTO ] : </span></strong>";
+    const QString msgInf = "<strong><span style='color:#FAEB0F;margin-left:80px;'>[ DETALLES ] : </span></strong>";
     const QString UPDATER = QString("cmd");
     const QStringList ARGUMENTS = ( QStringList()<<"" );
     const QString WORKING_DIR = QDir::currentPath()+"/bin/";
 
     /* Variables del analisis actual */
-    QString script_id ;
-    QString product_id ;
-    QString project_id ;
-    QString object_id ;
-    QString area_id ;
-    QTextEdit *final_output;
-    QString current_script;
 
     /* Variables de salida proceso ChdckOutBaseline */
+    QString checkingHome = "http://checking:8080/checking";
     QString BASE_URL = "http://checking:8080/report/qaking/Dimensions/";
     QMap<QString, QString> mapURLs;
-    QMap<QString, QString> listaExt;
+    QMap<QString, QStringList> listaExtBaselines;
+    AnalysisParameters *listaAnalisis;
     QString output__dm;
-    int idx; //indice de la pestaña actual a la que se le aplicara el analisis
+    //int idx; //indice de la pestaña actual a la que se le aplicara el analisis
 
 
     /* Listas de extensiones que analisa chk-qa */
@@ -141,6 +144,7 @@ private:
 
     QStringList tecn_names = { "plsql", "java", "actionscript", "cobol", "asp", "jsp", "javascript" };
     bool impFlag = true;    //bandera que indica si se debe imprimir o no
+
 };
 
 #endif // MAINWINDOW_H

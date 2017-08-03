@@ -6,6 +6,9 @@
 
 QT += core gui network
 QT += webkitwidgets multimedia
+QT += axcontainer
+
+CONFIG += qaxcontainer
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -20,17 +23,23 @@ SOURCES += main.cpp\
     analizador.cpp \
     console.cpp \
     downloadmanager.cpp \
-    proxysettings.cpp
+    proxysettings.cpp \
+    analysisparameters.cpp \
+    ctoolslogin.cpp
 
 HEADERS  += mainwindow.h \
     codeeditor.h \
     analizador.h \
     console.h \
     downloadmanager.h \
-    proxysettings.h
+    proxysettings.h \
+    analysisparameters.h \
+    webaxwidget.h \
+    ctoolslogin.h
 
 FORMS    += mainwindow.ui \
-    proxysettings.ui
+    proxysettings.ui \
+    ctoolslogin.ui
 
 RESOURCES += \
     data.qrc

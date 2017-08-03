@@ -28,5 +28,12 @@
         <file>images/Search.ico</file>
         <file>images/743.gif</file>
         <file>images/procesos.png</file>
+        <file>bin/data.properties</file>
+        <file>images/save.png</file>
+        <file>images/Black-Left-Arrow.png</file>
+        <file>images/Black-Right-Arrow.png</file>
+        <file>images/Home.png</file>
+        <file>images/Refresh.png</file>
+        <file>images/topLogin.png</file>
     </qresource>
 </RCC>

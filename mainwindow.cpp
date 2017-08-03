@@ -3,17 +3,30 @@
 #include "downloadmanager.h"
 #include "proxysettings.h"
 #include "xlsxdocument.h"
-#include <QDebug>
+#include "ctoolslogin.h"
+#include <QFileSystemModel>
+#include <QLoggingCategory>
 #include <QDesktopWidget>
-#include <QThread>
+#include <QInputDialog>
+#include <QWebElement>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QLoggingCategory>
+#include <QDirModel>
+#include <QTreeView>
 #include <QWebFrame>
-#include <QWebElement>
+#include <QThread>
 #include <QMovie>
-#include <QInputDialog>
+#include <QDebug>
+#include <ActiveQt/QAxWidget>
 
+
+/*
+class StringList : public QStringList
+{
+  public:
+    operator QString() const { return this->join(" ");  }
+};
+*/
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -22,6 +35,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     m_sSettingsFile = QDir::currentPath()+"/config/checking_tools_settings.ini";
 
+    ui->name_script_baseline->setVisible(false);
+    ui->name_script_baseline_label->setVisible(false);
+    ui->name_script_requests->setVisible(false);
+    ui->name_script_requests_label->setVisible(false);
+
+    listaAnalisis = new AnalysisParameters();
     loadSettings();
 
     /* Carga de configuraciones del servidor y seteo de cosas extras */
@@ -29,17 +48,24 @@ MainWindow::MainWindow(QWidget *parent) :
     chkproperties->beginGroup("servidor");
     /* End */
     init();
+    initConsole();
+    initSideBar();
+    initWebBrowser();
+    initMediaPlayer();
 
     QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
-    ui->webView_1->load(QUrl("http://checking:8080/checking/dashboard/view.run?category=projects"));
 
     /* Connect para el cambio de proyecto y atributo automatico */
     connect(ui->project_id_baseline, SIGNAL(currentIndexChanged(int)), ui->area_id_baseline, SLOT(setCurrentIndex(int)));
     connect(ui->project_id_requests, SIGNAL(currentIndexChanged(int)), ui->area_id_requests, SLOT(setCurrentIndex(int)));
 
-    connect(this, SIGNAL(informeTerminado()), this, SLOT(loadWebReport()));
-
+    connect(this, SIGNAL(informeTerminado(QString)), this, SLOT(loadWebReport(QString)));
     connect(ui->tabWebReport, SIGNAL(tabCloseRequested(int)), this, SLOT(sceneTabRemove_slot(int)));
+    connect(ui->linea_base_name, SIGNAL(returnPressed()), ui->btnBuscarBL, SLOT(click()));
+    connect(ui->request_titulo_id, SIGNAL(returnPressed()), ui->btnBuscarR, SLOT(click()));
+
+    /* Ejemplo drag and drop */
+
 }
 
 MainWindow::~MainWindow()
@@ -151,15 +177,12 @@ void MainWindow::loadSettings()
 
 void MainWindow::init()
 {
-    setConfigProgressBar(ui->progressBar_tab1, false, 0, 0);
-    setConfigProgressBar(ui->progressBar_tab2, false, 0, 0);
+    pg = new QProgressBar(this);
+    pg->resize(QSize(200, pg->height()));
+    pg->setVisible(false);
+    ui->statusBar->addPermanentWidget(pg);
     ui->btnGO->setEnabled(false);
     ui->btnEditar->setVisible(false);
-    ui->label_anal_requests->setVisible(false);
-    ui->label_anal_baseline->setVisible(false);
-    ui->label_nombre_requests->setVisible(false);
-    ui->label_nombre_baseline->setVisible(false);
-
 /* Bloque de creacion de de reproductor de sonidos */
     player = new QMediaPlayer;
     QString pathToSound = QDir::currentPath()+"/sounds/"+chkproperties->value("soundname").toString()+"";;
@@ -179,9 +202,11 @@ void MainWindow::init()
     connect(ui->actionSalida_compuesta, &QAction::toggled, [=] (const bool val) {calc->setSalidaComp(val);} );
 /* End */
 
-/* Bloque de creacion de gif de carga en pestaña de baseline */
+/* Bloque de creacion de gif de carga en pestaña de baseline y request*/
     ui->loading_baseline->setVisible(false);
     ui->loading_baseline->setMovie(loading_movie);
+    ui->loading_request->setVisible(false);
+    ui->loading_request->setMovie(loading_movie);
 /* End */
 
 /* Bloque de 'connect' para el cambio de Script AIM */
@@ -202,12 +227,14 @@ void MainWindow::init()
     QFile::copy(":/bin/checkoutRequest.groovy", path+"/checkoutRequest.groovy");
     QFile::copy(":/bin/alsUtils.jar", path+"/alsUtils.jar");
     QFile::copy(":/bin/dmclient.jar", path+"/dmclient.jar");
+    QFile::copy(":/bin/data.properties", path+"/data.properties");
 
     QFile::setPermissions(path+"/paexec.exe" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     QFile::setPermissions(path+"/checkoutBaseline.groovy" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     QFile::setPermissions(path+"/checkoutRequest.groovy" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     QFile::setPermissions(path+"/alsUtils.jar" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
     QFile::setPermissions(path+"/dmclient.jar" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+    QFile::setPermissions(path+"/data.properties" , QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
 
 
 /* End */
@@ -223,26 +250,112 @@ void MainWindow::init()
 
 /* Bloque de carga de la tabla Historial de baselines */
     /* Se intenta cargar el historial de analisis de Baselines desde el archivo /logBaselines.log y /logRequests.log */
-    loadHistoryFile(QDir().currentPath()+"/logBaseline.log", ui->historialTWidget);
-    loadHistoryFile(QDir().currentPath()+"/logRequest.log", ui->historialTWidget);
+    loadHistoryFile(QDir().currentPath()+"/CheckingTools.log", ui->historialTWidget);
+    //loadHistoryFile(QDir().currentPath()+"/logRequest.log", ui->historialTWidget);
 /* End */
 
-/* Inicializacion de la Consola de salida */
+}
+
+void MainWindow::initConsole()
+{
+    /* Se crea la consola de salida */
     console = new QPlainTextEdit();
+    console->setWordWrapMode(QTextOption::NoWrap);
     console->setReadOnly(true);
     console->setFont(QFont("MS Shell Dlg 2",10));
     ui->outConsole->setVisible(false);
-    ui->outConsole->setWidget(console);
+
+    /* Se crea una ventana principal dentro del dock para que pueda contener un toolbar */
+    QMainWindow* inner = new QMainWindow(ui->outConsole);
+    inner->setWindowFlags(Qt::Widget);
+
+    /* Se crea un toolbar para los botones de limpieza y guardado */
+    QToolBar* toolBar = new QToolBar(inner);
+    toolBar->setAllowedAreas(Qt::LeftToolBarArea);
+    toolBar->setMovable(false);
+
+    /* Se crean los botones de 'clear y save' par el toolbar */
+    QAction* logClear = new QAction(QIcon(":/images/Clean.png"),tr("Clear"),inner);
+    logClear->setStatusTip(tr("Clear console"));
+    connect(logClear, SIGNAL(triggered()), console, SLOT(clear()));
+
+    //QAction* logSave = new QAction(QIcon(":/images/save.png"),tr("Save"),inner);
+    //logSave->setStatusTip(tr("Save log"));
+
+    toolBar->addAction(logClear);
+    toolBar->setIconSize(QSize(15,15));
+    //toolBar->addAction(logSave);
+
+    inner->addToolBar(Qt::LeftToolBarArea,toolBar);
+    inner->setCentralWidget(console);
+
+    /* Configuraciones generales de la consola de salida */
+    ui->outConsole->setWidget(inner);
     ui->outConsole->setWindowTitle("Console");
     ui->outConsole->toggleViewAction()->setIcon(QIcon(":/images/cmd.png"));
     ui->outConsole->toggleViewAction()->setShortcut(QKeySequence("Ctrl+K"));
     ui->menuView->addAction(ui->outConsole->toggleViewAction());
-/* End */
+
 }
 
-QProcess* MainWindow::initProcess(QString cmd)
+void MainWindow::initSideBar()
+{
+    QDirModel* model = new QDirModel();
+    model->setReadOnly(true);
+    //model->setSorting(QDir::DirsFirst | QDir::IgnoreCase | QDir::Name);
+    model->setFilter(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+
+    QTreeView* treeView = new QTreeView();
+    treeView->setModel(model);
+    treeView->setAcceptDrops(true);
+    treeView->setDragEnabled(true);
+    treeView->setDragDropMode(QAbstractItemView::InternalMove);
+    treeView->setSortingEnabled(true);
+
+    // expand to current Directory
+    QString cDir = QDir().currentPath();
+    QModelIndex index = model->index(cDir);
+    treeView->expand(index);
+    treeView->scrollTo(index);
+    treeView->setCurrentIndex(index);
+    treeView->resizeColumnToContents(0);
+
+    QDockWidget* treeViewDock = new QDockWidget(this);
+    treeViewDock->setWidget(treeView);
+    treeViewDock->setWindowTitle("Busqueda");
+    treeViewDock->toggleViewAction()->setIcon(QIcon(":/images/Search.ico"));
+    treeViewDock->toggleViewAction()->setShortcut(QKeySequence("Ctrl+F"));
+    treeViewDock->setFeatures(treeViewDock->features() & ~(QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetMovable));
+    treeViewDock->setAllowedAreas(Qt::LeftDockWidgetArea);
+    ui->menuView->addAction(treeViewDock->toggleViewAction());
+    addDockWidget(Qt::LeftDockWidgetArea, treeViewDock);
+    treeViewDock->setVisible(false);
+
+}
+
+void MainWindow::initWebBrowser()
+{
+//    ui->webBrowser->setControl("{8856f961-340a-11d0-a96b-00c04fd705a2}");
+    ui->addressEdit->setText("http://checking:8080/checking");
+    connect(ui->addressEdit, SIGNAL(returnPressed()), this, SLOT(on_actionGo_triggered()));
+    connect(ui->webBrowser, SIGNAL(TitleChange(QString)), ui->titleWebBrowser, SLOT(setText(QString)));
+    connect(ui->btnBack, SIGNAL(clicked(bool)), ui->webBrowser, SLOT(GoBack()));
+    connect(ui->btnForward, SIGNAL(clicked(bool)), ui->webBrowser, SLOT(GoForward()));
+    connect(ui->webBrowser, SIGNAL(ProgressChange(int,int)), this, SLOT(setProgressBar(int,int)));
+
+    on_actionGo_triggered();
+}
+
+void MainWindow::initMediaPlayer()
+{
+    //ui->wmp->dynamicCall("src","file://C:\\Users\\diego.campos\\Desktop\\Boletos Electronicos.pdf");
+    //qInfo()<<dinnames.size()<<endl;
+}
+
+QProcess* MainWindow::initProcess(QString cmd, QString obj)
 {
     QProcess* proceso = new QProcess(this);
+    if(!obj.isEmpty()) { proceso->setObjectName(obj); }
     QByteArray ba;
     try {
 
@@ -263,7 +376,7 @@ QProcess* MainWindow::initProcess(QString cmd)
         proceso->write(cmd.toLatin1());
         proceso->waitForFinished(500);
 
-        console->appendHtml(msgOk+cmd);
+        logMsg(msgOk+cmd);
         ba = proceso->readAll();//clean stdout
         Q_UNUSED(ba);
 
@@ -271,7 +384,7 @@ QProcess* MainWindow::initProcess(QString cmd)
         connect(proceso, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
 
     }catch(...){
-        console->appendHtml(msgEr+cmd);
+        logMsg(msgEr+cmd);
         return NULL;
     }
 
@@ -286,31 +399,42 @@ void MainWindow::on_actionStart_triggered()
     if(!analisis_en_curso)
     {
         impFlag = true;                     // muestra todo el seguimiento en la salida del sumario
-        QString cmd = "";
-        QStringList lista;
-        idx = ui->tabWidget->currentIndex();
+        QString cmd = "", cObject="", projecNameCHK;
+        QStringList lista, listaExt;
+        QMap<QString, QString> params;
+        int idx = ui->tabWidget->currentIndex();
 
         identificarTab(idx);
 
         /* [1] - Si se cumple con los requisitos se creará un proceso que se ejecuta en el servidor de chk-qa */
         if( validarCampos(idx) ){
-            settings->beginGroup("projectchk");
-            QString projecNameCHK = settings->value(area_id).toString();
-            settings->endGroup();
-
             switch (idx) {
                 case 1:
-                    lista = ( QStringList()<<"1"<<projecNameCHK.trimmed()<<script_id<<product_id<<project_id<<object_id<<area_id<<object_id );
+                    cObject = ui->baseline_name->text();
+                    params = listaAnalisis->getParams(cObject);
+                    settings->beginGroup("projectchk");
+                    projecNameCHK = settings->value(params.value("areaId")).toString();
+                    settings->endGroup();
+                    listaExt = listaExtBaselines.value(cObject);
+                    lista = ( QStringList()<<"1"<<projecNameCHK.trimmed()<<params.value("scriptId")<<params.value("productId")<<params.value("projectId")<<params.value("objectId")<<params.value("areaId")<<params.value("objectId") );
                     cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+" "+lista[7]+"\n";
-                    /*Si no se ha hecho la busqueda de las extensiones del baseline se llaama al slot */
-                    if(listaExt.size()==0 || listaExt.value(listaExt.firstKey())!=ui->baseline_name->text() ){
-                        ui->linea_base_name->setText(ui->baseline_name->text());
+                    /* Si no se ha hecho la busqueda de las extensiones del baseline se llaama al slot */
+                    if( listaExt.size() == 0 || listaExt.isEmpty() )
+                    {
+                        ui->linea_base_name->setText(cObject);
+                        ui->ambienteBaseline->setCurrentIndex(0);
                         on_btnBuscarBL_clicked();
                     }
                     break;
                 case 2:
-                    callRequestGroovy();
-                    lista = ( QStringList()<<"2"<<projecNameCHK.trimmed()<<script_id<<product_id<<project_id<<object_id<<area_id );
+                    cObject = ui->requests_id->text();
+                    params = listaAnalisis->getParams(cObject);
+                    settings->beginGroup("projectchk");
+                    projecNameCHK = settings->value(params.value("areaId")).toString();
+                    settings->endGroup();
+                        ui->request_titulo_id->setText(cObject);
+                        on_btnBuscarR_clicked();
+                    lista = ( QStringList()<<"2"<<projecNameCHK.trimmed()<<params.value("scriptId")<<params.value("productId")<<params.value("projectId")<<params.value("objectId")<<params.value("areaId") );
                     cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. D:\\modelo_operativo_checking_4.2\\"+lista[2]+" "+lista[3]+" "+lista[4]+" "+lista[5]+" "+lista[6]+"\n";
                     break;
                 default:
@@ -323,11 +447,10 @@ void MainWindow::on_actionStart_triggered()
         /* [1] END */
 
         bloquarPanel(true,idx);
-        CursorCarga(true, idx);
-        checkearSalida(lista);
+        CursorCarga(true);
 
         // Se inicia el proceso de analisis
-        if(initProcess(cmd)!=NULL)
+        if(initProcess(cmd, cObject)!=NULL)
             analisis_en_curso = true;       // bandera de seguridad para el analisis actual - en ejecucion
 
     }else{
@@ -340,6 +463,7 @@ void MainWindow::on_actionStop_triggered()
     QMessageBox::StandardButton reply;
     int numpr = listadeProcesos.size();
     int result = 0;
+    int idx = ui->tabWidget->currentIndex();
     try{
         if(numpr>0){
             reply = QMessageBox::question(this, "Cuidado!", "¿Detener todos los procesos?", QMessageBox::Yes|QMessageBox::No);
@@ -350,15 +474,15 @@ void MainWindow::on_actionStop_triggered()
                     qp->terminate();
                     qp->close();
                     qp->kill();
-                    listadeProcesos.removeAll(qp);
+                    listadeProcesos.removeOne(qp);
                 }
 
                 bloquarPanel(false, idx);
-                CursorCarga(false, idx);
-                setLoading(false);
+                CursorCarga(false);
+                setLoadingBaseline(false);
                 analisis_en_curso = false;
                 result = numpr - listadeProcesos.size();
-                console->appendHtml(msgOk+QString::number(result)+" procesos detenidos correctamente");
+                logMsg(msgOk+QString::number(result)+" de "+QString::number(numpr)+" procesos detenidos correctamente");
             }
         }else{
             QMessageBox::critical(this, tr("ERROR"), tr("Actualmente no existen procesos que detener"));
@@ -368,55 +492,80 @@ void MainWindow::on_actionStop_triggered()
     }
 }
 
-void MainWindow::callRequestGroovy()
-{
-
-    final_output->clear();
-    QString commd = "groovy "+current_script+" "+product_id+" "+project_id+" "+object_id+" "+area_id+"\n";
-    QProcess *prcGroovy = initProcess(commd);
-
-    disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
-
-    prcGroovy->setObjectName(QString::number(idx));
-    if ((prcGroovy->state()==QProcess::Running))
-    {
-        analisis_en_curso = true;
-        connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
-    }else
-        console->appendHtml(msgEr+"GROOVY IS NOT READY");
-}
-
 void MainWindow::on_btnBuscarBL_clicked()
 {
-    if(!analisis_en_curso)
-    {
-        QString baseline_id = ui->linea_base_name->text();
+    //if(!analisis_en_curso)    {
+        QString baseline_id = ui->linea_base_name->text().trimmed();
+        QString downBL = ui->downloadBL->isChecked()? "true":"false";
+        ui->baseline_name->setText(baseline_id);
+        QString br_ambiente = ui->ambienteBaseline->currentText();
+        QMap<QString, QString> params;
+
+        //logMsg(msgInf+"ANALIZANDO EN EL AMBIENTE: "+br_ambiente);
 
         if( !baseline_id.trimmed().isNull() && !baseline_id.trimmed().isEmpty() )
         {
             impFlag = true; // muestra todo el seguimiento en la salida del sumario
-            setLoading(true);
-            idx = ui->tabWidget->currentIndex();
+            setLoadingBaseline(true);
+            int idx = ui->tabWidget->currentIndex();
 
             identificarTab(idx);
-            object_id = baseline_id;
+            ui->baseline_output->clear();
+            params = listaAnalisis->getParams(baseline_id);
 
             /*  Si está instalado groovy ejecuta una llamada a la api de dimensions par sacar las extensiones de los archivos */
-            final_output->clear();
-            QString commd = "groovy \""+current_script+"\" \""+baseline_id+"\"\n";
+            //final_output->clear();
+            QString commd = "groovy \""+params.value("currentScript")+"\" \""+baseline_id+"\" \""+br_ambiente+"\" \""+QString(downBL)+"\"\n";
 
-            QProcess* prcGroovy = initProcess(commd);
-            prcGroovy->setObjectName(QString::number(idx));
+            QProcess* prcGroovy = initProcess( commd, baseline_id );
 
             if ((prcGroovy->state()==QProcess::Running))
             {
-                analisis_en_curso = true;
                 disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+                disconnect(prcGroovy, SIGNAL( readyReadStandardError() ) , this, SLOT(readError()) );
                 connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
             }else
-                console->appendHtml(msgEr+"GROOVY IS NOT READY");
+                logMsg(msgEr+"GROOVY IS NOT READY");
         }else{
             QMessageBox::critical(this,"ERROR", "Faltan datos: 'NOMBRE DE LA LINEA BASE' ");
+        }
+    //}else        QMessageBox::information(this, "Informacion", "Analisis en curso, por favor espere hasta que termine");
+
+}
+
+void MainWindow::on_btnBuscarR_clicked()
+{
+    if(!analisis_en_curso)
+    {
+        QString obRequest = ui->request_titulo_id->text();
+        ui->requests_id->setText(obRequest);
+        QMap<QString, QString> params;
+
+        logMsg(msgInf+"BUSCANDO INFORMACION RELACIONADA AL OBJETO: "+obRequest);
+
+        if( !obRequest.trimmed().isNull() && !obRequest.trimmed().isEmpty() )
+        {
+            impFlag = true; // muestra todo el seguimiento en la salida del sumario
+            setLoadingRequest(true);
+            int idx = ui->tabWidget->currentIndex();
+
+            identificarTab(idx);
+            params = listaAnalisis->getParams(obRequest);
+            ui->request_output->clear();
+
+            QString commd = "groovy \""+params.value("currentScript")+"\" "+params.value("productId")+" "+params.value("projectId")+" "+params.value("objectId")+" "+params.value("areaId")+"\n";
+            QProcess *prcGroovy = initProcess(commd, obRequest);
+
+            disconnect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
+            disconnect(prcGroovy, SIGNAL( readyReadStandardError() ), this, SLOT(readError()) );
+
+            if ((prcGroovy->state()==QProcess::Running))
+            {
+                connect(prcGroovy, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
+            }else
+                logMsg(msgEr+"GROOVY IS NOT READY");
+        }else{
+            QMessageBox::critical(this,"ERROR", "Faltan datos: 'NOMBRE O TITULO DEL REQUEST' ");
         }
     }else{
         QMessageBox::information(this, "Informacion", "Analisis en curso, por favor espere hasta que termine");
@@ -426,6 +575,15 @@ void MainWindow::on_btnBuscarBL_clicked()
 void MainWindow::identificarTab(int tab)
 {
     /* BLoque de carga de proyecto de checking */
+
+    QString script_id = ui->name_script_baseline->text();
+    QString product_id = ui->product_id_baseline->currentText();
+    QString project_id = ui->project_id_baseline->currentText();
+    QString object_id = ui->baseline_name->text().trimmed();
+    QString area_id = ui->area_id_baseline->currentText();
+    QTextEdit *final_output = ui->baseline_output;
+    QString current_script = "checkoutBaseline.groovy";
+
     if(tab==2) {
         script_id = ui->name_script_requests->text();
         product_id = ui->product_id_requests->currentText();
@@ -435,20 +593,13 @@ void MainWindow::identificarTab(int tab)
         final_output = ui->request_output;
         current_script = "checkoutRequest.groovy";
     }
-    else if(tab==1){
-        script_id = ui->name_script_baseline->text();
-        product_id = ui->product_id_baseline->currentText();
-        project_id = ui->project_id_baseline->currentText();
-        object_id = ui->baseline_name->text().trimmed();
-        area_id = ui->area_id_baseline->currentText();
-        final_output = ui->baseline_output;
-        current_script = "checkoutBaseline.groovy";
-    }
+    //qInfo()<<script_id<<product_id<<project_id<<object_id<<area_id<<final_output->objectName()<<current_script<<endl;
+    listaAnalisis->add(object_id, tab, script_id, product_id, project_id, object_id, area_id, current_script, final_output );
 }
 
 void MainWindow::on_actionGetProcess_triggered()
 {
-    QMessageBox::information(this, "Informacion", QString("Procesos actuales: "+QString::number(listadeProcesos.size())));
+    logMsg(msgInf+QString::number(listadeProcesos.size())+" procesos en ejecucion");
 }
 
 void MainWindow::on_btnEditar_clicked()
@@ -539,41 +690,6 @@ void MainWindow::on_actionEliminar_Duplicados_triggered()
     ui->textAreaSalida->setPlainText(listaSalida.join("\n"));
 }
 
-void MainWindow::on_btnFormato_clicked()
-{
-    ui->statusBar->showMessage("Aplicando el formato a las lineas de entrada....", 2000);
-    QString m_SFile = QDir::currentPath()+"/config/checking_tools_settings.ini";
-    QSettings *config = new QSettings(m_SFile, QSettings::IniFormat);
-    QString txsalida = "";
-
-    config->beginGroup("DIMPROJECTS");
-
-    QString textIn = ui->inputPane->toPlainText();
-    QStringList listIn;
-    if(!textIn.isEmpty()){
-        listIn<<textIn.split("\n");
-        foreach (QString lbase, listIn) {
-            if(!lbase.contains(";")){
-                if(lbase.isEmpty()){}
-                else{
-                    QString tmpAtrib;
-                    if(buscarLB(lbase, &tmpAtrib, config))
-                        txsalida.append(lbase+";"+tmpAtrib+"\n");
-                    else
-                        txsalida.append(lbase+";----------\n");
-                }
-            }else{
-                txsalida.append(lbase+"\n");
-            }
-        }
-    }else{
-        ui->statusBar->showMessage("Lista vacia!", 2000);
-    }
-    ui->inputPane->clear();
-    ui->inputPane->appendPlainText(txsalida);
-    config->endGroup();
-}
-
 void MainWindow::on_btnReload_clicked()
 {
     QItemSelectionModel *select = ui->historialTWidget->selectionModel();
@@ -611,6 +727,35 @@ void MainWindow::on_btnReload_clicked()
 
 /* Fin Menus y Botones */
 
+/* Funciones de la pestaña navegador */
+void MainWindow::on_actionGo_triggered()
+{
+    ui->webBrowser->dynamicCall("Navigate(const QString&)", address());
+}
+
+void MainWindow::on_btnHome_clicked()
+{
+    ui->addressEdit->setText(checkingHome);
+    ui->webBrowser->dynamicCall("Navigate(const QString&)", checkingHome);
+}
+
+void MainWindow::on_btnRefresh_clicked()
+{
+    ui->webBrowser->dynamicCall("Navigate(const QString&)", ui->addressEdit->text());
+}
+
+void MainWindow::setProgressBar(int a, int b){
+    if (a <= 0 || b <= 0) {
+        pg->hide();
+        return;
+    }
+    pg->show();
+    pg->setRange(0, b);
+    pg->setValue(a);
+}
+
+/* Fin de las funciones de navegador */
+
 
 /* Slots de control para los connect */
 void MainWindow::update_Geometry()
@@ -644,8 +789,22 @@ void MainWindow::readOutput()
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
 
-    QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
-    writeText(buff, Qt::green);
+    QString buff = QString::fromLatin1(procPaExec->readLine());
+    QStringList mensajes = buff.split("\n");
+
+    for (QString str : mensajes ) {
+        if(!str.isEmpty() && !str.isNull() && str!="\r\r"){
+            logMsg(msgInf+str);
+            if(str.contains("BUILD SUCCESSFUL"))
+            {
+                emit informeTerminado(procPaExec->objectName());
+                analisis_en_curso = false;
+                bloquarPanel(false);
+                CursorCarga(false);
+                player->play();
+            }
+        }
+    }
 }
 
 void MainWindow::readError()
@@ -654,57 +813,36 @@ void MainWindow::readError()
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
 
     QString error = QString::fromLatin1(procPaExec->readAllStandardError());
-    writeText(error, Qt::red);
-}
 
-void MainWindow::readDotout()
-{
-    QObject *sender = QObject::sender();
-    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
-    int idp = procPaExec->objectName().toInt();
-
-    QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
-    if(buff.contains("ERR_TIMEOUT")){
-        writeText("^ [Tiempo de espera agotado] - Estado del analisis: TIMEOUT", msg_alert);
-        bloquarPanel(false, idp);
-        CursorCarga(false, idp);
-        player->play();
-        return;
+    QStringList mensajes = error.split("\n");
+    for (auto str : mensajes )
+    {
+        if(!str.isEmpty() && !str.isNull() && str!="\r\r"){
+            logMsg(msgInf+str);
+            if(str.contains("BUILD FAILED"))
+            {
+                emit informeTerminado(procPaExec->objectName());
+                analisis_en_curso = false;
+                bloquarPanel(false);
+                CursorCarga(false);
+                player->play();
+            }
+        }
     }
-
-    if(buff.contains("READYOUT")){
-        writeText("[ '.out' encontrado ] - Estado del analisis: FINALIZADO", msg_notify);
-        emit informeTerminado();
-        if(buff.contains("FAILOUT"))
-            writeText("[ '.err' encontrado ] - Estado del analisis: finalizado con ERROR", msg_alert);
-        bloquarPanel(false, idp);
-        CursorCarga(false, idp);
-        player->play();
-    }
-}
-
-void MainWindow::outConsole(QString cmd)
-{  
-
-    QObject *sender = QObject::sender();
-    QProcess *procPaExec = qobject_cast<QProcess*>(sender);
-    qInfo()<<"outConsole :"<<procPaExec->processId()<<endl;
-
-    qInfo()<<cmd<<endl;
-
-    //console->appendPlainText(procPaExec->readAll());
 }
 
 void MainWindow::bloquarPanel(bool val, int id)
 {
-    activarBotones(id, !val);
+    ui->actionStart->setEnabled(!val);
     switch(id)
     {
         case 1: ui->contenedorTab2->setEnabled(!val);
                 break;
         case 2: ui->contenedorTab1->setEnabled(!val);
                 break;
-        default: QMessageBox::critical(this, "___Error General___", "Se ha producido un error interno\ny el programa debe cerrarse"); exit(1); break;
+        default: ui->contenedorTab2->setEnabled(!val);
+                 ui->contenedorTab1->setEnabled(!val);
+                 break;
     }
 
 }
@@ -779,7 +917,7 @@ bool MainWindow::loadHistoryFile(QString filePath, QTableWidget *tabla)
     return true;
 }
 
-void MainWindow::setLoading(bool b)
+void MainWindow::setLoadingBaseline(bool b)
 {
     if(b)
         loading_movie->start();
@@ -787,8 +925,22 @@ void MainWindow::setLoading(bool b)
         loading_movie->stop();
 
     ui->btnBuscarBL->setVisible(!b);
+    ui->btnBuscarR->setVisible(!b);
     ui->loading_baseline->setVisible(b);
+    ui->loading_request->setVisible(b);
     ui->linea_base_name->setEnabled(!b);
+}
+
+void MainWindow::setLoadingRequest(bool b)
+{
+    if(b)
+        loading_movie->start();
+    else
+        loading_movie->stop();
+
+    ui->btnBuscarR->setVisible(!b);
+    ui->loading_request->setVisible(b);
+    ui->request_titulo_id->setEnabled(!b);
 }
 
 void MainWindow::rstrip(QString &str){
@@ -796,46 +948,15 @@ void MainWindow::rstrip(QString &str){
     str.remove(QRegExp("\\s+"));
 }
 
+QString MainWindow::address()
+{
+    return ui->addressEdit->text().trimmed();
+}
+
 /* Fin de Slots de control */
 
 
 /* Funciones de control */
-void MainWindow::activarBotones(int id, bool b)
-{
-    switch(id)
-    {
-        case 0: break;
-        case 1: ui->actionStart->setEnabled(b);
-                //ui->actionStop->setEnabled(b);
-                break;
-        case 2: ui->actionStart->setEnabled(b);
-                //ui->actionStop->setEnabled(b);
-                break;
-        case 3: break;
-        default: break;
-    }
-}
-
-void MainWindow::setConfigProgressBar(QProgressBar *pg, bool bp, int min, int max){
-    pg->setVisible(bp);
-    pg->setRange(min, max);
-
-    switch(idx)
-    {
-        case 1: ui->label_anal_baseline->setVisible(bp);
-                ui->label_nombre_baseline->setText(ui->baseline_name->text().trimmed());
-                ui->label_nombre_baseline->setVisible(bp);
-                break;
-        case 2: ui->label_anal_requests->setVisible(bp);
-                ui->label_nombre_requests->setText(ui->requests_id->text().trimmed());
-                ui->label_nombre_requests->setVisible(bp);
-                break;
-        default: ui->statusBar->showMessage("Error pestaña no configurada.. ", 1000); break;
-    }
-
-
-}
-
 bool MainWindow::validarCampos(int id)
 {
     bool mflag = true;
@@ -901,30 +1022,10 @@ bool MainWindow::saveToDisk(const QString &filename, QIODevice *data)
     return true;
 }
 
-void MainWindow::CursorCarga(bool b, int id)
+void MainWindow::CursorCarga(bool b)
 {
-    switch(id)
-    {
-        case 1: setConfigProgressBar(ui->progressBar_tab2, b, 0, 0);
-                break;
-        case 2: setConfigProgressBar(ui->progressBar_tab1, b, 0, 0);
-                break;
-        default: break;
-    }
-
-}
-
-void MainWindow::checkearSalida(QStringList arg)
-{
-
-    ui->statusBar->showMessage("Analizando: "+arg[5]+" por favor espere....", 5000);
-    // quitar espacios del elemento arg[1] corresponde al nombre del proyecto en checkingqa
-    rstrip(arg[1]);
-    QString cmd = "START /B /WAIT "+chkproperties->value("exepa").toString()+" \\\\"+chkproperties->value("ip").toString()+" -u "+chkproperties->value("user").toString()+" -p "+chkproperties->value("pass").toString()+" "+chkproperties->value("pathmo").toString()+chkproperties->value("existfile").toString()+" "+arg[3]+" "+arg[4]+" "+arg[5]+" "+arg[1]+"\n";
-    QProcess *proSalida = initProcess(cmd);
-    disconnect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readOutput()) );
-    connect(proSalida, SIGNAL( readyReadStandardOutput() ), this, SLOT(readDotout()) );
-    proSalida->setObjectName(arg[0]);
+    pg->setVisible(b);
+    pg->setRange(0, 0);
 
 }
 
@@ -951,6 +1052,14 @@ void MainWindow::writeText(QString text, int color)
     cursor.movePosition(QTextCursor::End);
     ui->terminal->setTextCursor(cursor);
 
+}
+
+void MainWindow::logMsg(QString text)
+{
+    QTextCursor cursor = console->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    console->setTextCursor(cursor);
+    console->appendHtml(text);
 }
 
 void MainWindow::mkdirTemp(bool f, QString dir)
@@ -981,13 +1090,13 @@ bool MainWindow::buscarLB(QString lbase, QString *tmpA, QSettings *config)
     return false;
 }
 
-void MainWindow::MsgBlOut(QString msg, QTextEdit *QP)
+void MainWindow::MsgBlOut(QString msg, QTextEdit *tE)
 {
     QStringList lista_str = msg.split("\n");
     foreach ( QString str, lista_str )
     {
         if( !str.isEmpty() && !str.isNull() )
-            QP->insertHtml(str+"<br>");
+            tE->insertHtml(str+"<br>");
     }
 }
 
@@ -1017,14 +1126,8 @@ void MainWindow::CheckoutDIM()
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
     QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
-
-    QTextEdit *currPTEdit;
-    int id = procPaExec->objectName().toInt();
-
-    if(id == 1)
-        currPTEdit = ui->baseline_output;
-    else
-        currPTEdit = ui->request_output;
+    QMap<QString, QString> params = listaAnalisis->getParams(procPaExec->objectName());
+    QTextEdit* currPTEdit = QObject::findChild<QTextEdit*>(params.value("finalOutput"));
 
     if(impFlag){
         buff.replace("\r\n", "\n");
@@ -1036,14 +1139,14 @@ void MainWindow::CheckoutDIM()
 
     output__dm.append(buff);
 
-    if(buff.contains("SUCCESS"))
+    if(buff.contains("SUCCESS!"))
     {
         output__dm.replace("\r\n", "\n");
         lista_lineas = output__dm.split("\n");
 
         /* Desde [INICIO] hasta [FIN] estan los nombres de los items de la linea base */
-        ini = lista_lineas.lastIndexOf("## INICIO");
-        fin = lista_lineas.lastIndexOf("## FIN");
+        ini = lista_lineas.lastIndexOf("## INICIO-COMPONENTES");
+        fin = lista_lineas.lastIndexOf("## FIN-COMPONENTES");
         int tam = fin - ini;
 
         /* Se calcula la sub lista de los nombres de los items y se obtiene sus extensiones */
@@ -1051,80 +1154,96 @@ void MainWindow::CheckoutDIM()
 
         connect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(ImprimirDetallesDIM()) );
 
-        getExtensiones(lista_lineas.mid(ini, tam));
+        getExtensiones(lista_lineas.mid(ini, tam), procPaExec->objectName());
         putHTML(lista_lineas.mid(ini, tam), currPTEdit);
-        MsgBlOut("## FIN", currPTEdit);
-
-        setLoading(false);
-        analisis_en_curso = false;
+        MsgBlOut("<br>## FIN-COMPONENTES", currPTEdit);
         return;
 
-    }else if(buff.contains("FAIL")){
+    }else if(buff.contains("FAIL!")){
         MsgBlOut("<strong><span style='color:red;margin-left:80px;'>[ ERROR ] : </span></strong> No se puede descargar los componentes desde Dimensions.", currPTEdit);
         disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(CheckoutDIM()) );
-
-        setLoading(false);
-        analisis_en_curso = false;
+        setLoadingBaseline(false);
+        setLoadingRequest(false);
         return;
     }
 }
 
-void MainWindow::ImprimirDetallesDIM(){
+void MainWindow::ImprimirDetallesDIM()
+{
     QObject *sender = QObject::sender();
     QProcess *procPaExec = qobject_cast<QProcess*>(sender);
     QString buff = QString::fromLatin1(procPaExec->readAllStandardOutput());
+    QMap<QString, QString> params = listaAnalisis->getParams(procPaExec->objectName());
+    QTextEdit* currPTEdit = QObject::findChild<QTextEdit*>(params.value("finalOutput"));
 
-    MsgBlOut(buff, ui->baseline_output);
+    QStringList mensajes = buff.split("\n");
+    buff.replace("\r\n", "\n");
+    buff.replace("\r", "\n");
+
+    for (QString str : mensajes ) {
+        if(!str.isEmpty() && !str.isNull() && str!="\r\r" && str!="\r"){
+            MsgBlOut(str, currPTEdit);
+            if(buff.contains("DONE!"))
+            {
+                setLoadingBaseline(false);
+                setLoadingRequest(false);
+                disconnect(procPaExec, SIGNAL( readyReadStandardOutput() ), this, SLOT(ImprimirDetallesDIM()) );
+            }
+        }
+    }
+
+
 }
 
-void MainWindow::getExtensiones(QStringList lt)
+void MainWindow::getExtensiones(QStringList lt, QString objName)
 {
-    listaExt.clear();
+    QStringList allExt;
     lt.pop_front();
     for(QString it : lt)
     {
         QStringList aux = it.split("/");
         QString ext = aux[0].mid(aux[0].lastIndexOf("."));
-        listaExt.insert(ext, object_id);
+        allExt.append(ext);
     }
+    allExt.removeDuplicates();
+    listaExtBaselines.insert(objName, allExt);
 }
 
-void MainWindow::loadWebReport()
+void MainWindow::loadWebReport(QString objName)
 {
     QTableWidget *tablaSalida = ui->historialTWidget;
-    QString logPath = "";
+    QString logPath = QDir().currentPath()+"/CheckingTools.log";
     QString fecha = QDateTime(QDate().currentDate()).toString("yyyy-MM-dd");
+    QMap<QString,QString> params = listaAnalisis->getParams(objName);
     int nrows = 0;
     mapURLs.clear();
 
     //[projectchk]
     settings->beginGroup("projectchk");
-    QString projecNameCHK = settings->value(area_id).toString();
+    QString projecNameCHK = settings->value(params.value("areaId")).toString();
     settings->endGroup();
 
     //[dmreport]
     settings->beginGroup("dmreport");
-    QString dm_project_id = settings->value(area_id).toString();
-    if(project_id.endsWith("_PRE")){
-        dm_project_id = project_id;
-        console->appendHtml(msgInf+"ANALISIS DE PROYECTO "+dm_project_id+": CON RAMA DE PRE");
+    QString dm_project_id = settings->value(params.value("areaId")).toString();
+    if(params.value("projectId").endsWith("_PRE")){
+        dm_project_id = params.value("projectId");
+        logMsg(msgInf+"ANALISIS DE PROYECTO "+dm_project_id+": EN RAMA DE PRE-PRODUCCION");
     }
     settings->endGroup();
 
-    for(QString ext : listaExt.keys())
+    QStringList listaExt = listaExtBaselines.value(objName);
+    for(QString ext : listaExt)
     {
-        if(LIST_PLSQL.contains(ext)) mapURLs.insert("plsql", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportplsql.html");
-        if(LIST_JAVA.contains(ext)) mapURLs.insert("java", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportjava.html");
-        if(LIST_ACTIONSCRIPT.contains(ext)) mapURLs.insert("actionscript", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportactionscript.html");
-        if(LIST_COBOL.contains(ext)) mapURLs.insert("cobol", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportcobol.html");
-        if(LIST_ASP.contains(ext)) mapURLs.insert("asp", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportasp.html");
-        if(LIST_JSP.contains(ext)) mapURLs.insert("jsp", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportjsp.html");
-        if(LIST_JAVASCRIPT.contains(ext)) mapURLs.insert("javascript", BASE_URL+projecNameCHK+"/"+product_id+"/"+dm_project_id+"/"+object_id+"/reportjavascript.html");
+        if(LIST_PLSQL.contains(ext)) mapURLs.insert("plsql", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportplsql.html");
+        if(LIST_JAVA.contains(ext)) mapURLs.insert("java", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportjava.html");
+        if(LIST_ACTIONSCRIPT.contains(ext)) mapURLs.insert("actionscript", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportactionscript.html");
+        if(LIST_COBOL.contains(ext)) mapURLs.insert("cobol", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportcobol.html");
+        if(LIST_ASP.contains(ext)) mapURLs.insert("asp", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportasp.html");
+        if(LIST_JSP.contains(ext)) mapURLs.insert("jsp", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportjsp.html");
+        if(LIST_JAVASCRIPT.contains(ext)) mapURLs.insert("javascript", BASE_URL+projecNameCHK+"/"+params.value("productId")+"/"+dm_project_id+"/"+objName+"/reportjavascript.html");
     }
     /*Se limpia el map para el siguiente analisis */
-    listaExt.clear();
-
-    logPath = idx==1 ? QDir().currentPath()+"/logBaseline.log" : QDir().currentPath()+"/logRequest.log";
 
     QMapIterator<QString, QString> i(mapURLs);
     while (i.hasNext()) {
@@ -1221,35 +1340,28 @@ void MainWindow::showDetails(bool status)
 
 }
 
+
+
+
 /* Fin de la zona de pruebas */
-
-
-
-
-
-
-void MainWindow::on_btnIniciarAct_clicked()
-{
-    QString cmd = "START /B /WAIT paexec.exe \\\\192.168.10.63 -u checking -p chm.321. -w D:\\dimensions\\pendiente\\ -s cmd.exe\n";
-    QProcess *proSalida = initProcess(cmd);
-
-    if(proSalida) qInfo()<<"DESCARGANDO..."<<endl ;
-
-}
-
 void MainWindow::on_actionDoTest_triggered()
 {
-    bool ok = false;
+
+    /*bool ok = false;
     QString text = QInputDialog::getText(this, tr("Ingrese el texto aqui:"), tr("Text here:"), QLineEdit::Normal, "", &ok);
 
     if(ok){
-        QString colorMsg = "<strong><span style='color:"+text+";margin-left:80px;'>[ WARNING ] : </span></strong>";
-        console->appendHtml(colorMsg);
-    }
+        logMsg(msgOk+text);
+    }*/
+
+    QString docWeb = ui->webBrowser->generateDocumentation();
+    console->appendHtml(docWeb);
+
+    CtoolsLogin* login = new CtoolsLogin(this);
+    login->setModal(true);
+    login->show();
 
 }
-
-
 
 
 
