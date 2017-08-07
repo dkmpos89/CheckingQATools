@@ -14,6 +14,9 @@ class CtoolsLogin : public QDialog
 public:
     explicit CtoolsLogin(QWidget *parent = 0);
     ~CtoolsLogin();
+    //bool eventFilter(QObject *target, QEvent *e);
+private slots:
+    void on_btnOk_clicked();
 
 private:
     Ui::CtoolsLogin *ui;
