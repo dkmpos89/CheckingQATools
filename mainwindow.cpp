@@ -336,9 +336,10 @@ void MainWindow::initSideBar()
 void MainWindow::initWebBrowser()
 {
 //    ui->webBrowser->setControl("{8856f961-340a-11d0-a96b-00c04fd705a2}");
-    ui->addressEdit->setText("http://checking:8080/checking");
+    ui->addressEdit->setText("http://checking:8080/checking/login.jsp");
     connect(ui->addressEdit, SIGNAL(returnPressed()), this, SLOT(on_actionGo_triggered()));
     connect(ui->webBrowser, SIGNAL(TitleChange(QString)), ui->titleWebBrowser, SLOT(setText(QString)));
+    connect(ui->webBrowser, SIGNAL(NavigateComplete(QString)), ui->addressEdit, SLOT(setText(QString)));
     connect(ui->btnBack, SIGNAL(clicked(bool)), ui->webBrowser, SLOT(GoBack()));
     connect(ui->btnForward, SIGNAL(clicked(bool)), ui->webBrowser, SLOT(GoForward()));
     connect(ui->webBrowser, SIGNAL(ProgressChange(int,int)), this, SLOT(setProgressBar(int,int)));
